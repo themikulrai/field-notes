@@ -1,6 +1,0 @@
-# PLACEHOLDER — Chunk 5 fills this in with the real reverse-proxy / static-file
-# config (serves apps/web/dist and reverse-proxies /api + /events to the FastAPI
-# container).
-:80 {
-    respond "field-notes Caddy placeholder"
-}

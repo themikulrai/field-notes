@@ -11,6 +11,10 @@ const config = {
     environment: "jsdom",
     setupFiles: ["./src/setupTests.ts"],
     css: false,
+    // `e2e/` is for Playwright, not Vitest. Exclude or Vitest will try to
+    // resolve `@playwright/test` and fail.
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: ["node_modules", "dist", "e2e/**"],
   },
 };
 

@@ -1,4 +1,4 @@
-.PHONY: dev test lint format fmt web-dev api-dev db-up db-down clean
+.PHONY: dev test lint format fmt web-dev api-dev db-up db-down seed clean
 
 dev:
 	docker-compose up
@@ -25,6 +25,12 @@ lint:
 format fmt:
 	uv run ruff format .
 	uv run ruff check --fix .
+
+# Seed the running API/DB with the prototype's mock data.
+# Requires the API to be reachable at FIELD_NOTES_API_URL (default http://localhost:8000)
+# and FIELD_NOTES_KEY to be set in the environment or .env file.
+seed:
+	uv run python -m tools.seed
 
 clean:
 	rm -rf .venv apps/web/node_modules apps/web/dist

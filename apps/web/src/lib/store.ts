@@ -50,6 +50,11 @@ interface StoreState {
   loadCells: (pid: string) => Promise<void>;
   setActiveProject: (pid: string | null) => void;
   setFilter: (f: Filter) => void;
+  // Apply a filter received via SSE (ui.filter_changed). Identical to setFilter
+  // but the name signals "no API write" — agents only set filters by hitting
+  // the API directly; the event flows back to all subscribers including the
+  // origin client, and we must not bounce it back.
+  applyRemoteFilter: (f: Filter) => void;
 
   createProject: (name: string) => Promise<Project | null>;
   deleteProject: (pid: string) => Promise<void>;
@@ -68,7 +73,13 @@ interface StoreState {
   isSectionCollapsed: (pid: string, key: string) => boolean;
 
   // Live-event hooks
-  applyEvent: (env: { kind: string; project_id?: string | null; cell_id?: string | null; id: string }) => Promise<void>;
+  applyEvent: (env: {
+    kind: string;
+    project_id?: string | null;
+    cell_id?: string | null;
+    id: string;
+    payload?: Record<string, unknown>;
+  }) => Promise<void>;
   patchCell: (pid: string, cell: Cell) => void;
   removeCell: (pid: string, cid: string) => void;
 }
@@ -107,16 +118,31 @@ export const useStore = create<StoreState>((set, get) => ({
   loadCells: async (pid) => {
     try {
       const cs = await api.listCells(pid);
-      set((s) => ({ cellsByProject: { ...s.cellsByProject, [pid]: cs } }));
+      set((s) => {
+        const next: Partial<StoreState> = { cellsByProject: { ...s.cellsByProject, [pid]: cs } };
+        // Initialize the filter pill from the project's persisted ui_filter,
+        // but only for the active project (don't clobber the filter while the
+        // user is looking at a different tab).
+        if (s.activeProjectId === pid) {
+          const proj = s.projects.find((p) => p.id === pid);
+          if (proj?.ui_filter) next.filter = proj.ui_filter as Filter;
+        }
+        return next;
+      });
     } catch (e) {
       set({ error: (e as Error).message });
     }
   },
 
   setActiveProject: (pid) => {
-    set({ activeProjectId: pid, filter: "all" });
+    // When switching tabs, seed the filter from the project's persisted ui_filter
+    // (set by MCP set_filter / direct API write) — fallback to "all".
+    const proj = pid ? get().projects.find((p) => p.id === pid) : null;
+    const f: Filter = (proj?.ui_filter as Filter | undefined) ?? "all";
+    set({ activeProjectId: pid, filter: f });
   },
   setFilter: (f) => set({ filter: f }),
+  applyRemoteFilter: (f) => set({ filter: f }),
 
   createProject: async (name) => {
     try {
@@ -291,6 +317,17 @@ export const useStore = create<StoreState>((set, get) => ({
     // Coarse-grained: re-fetch when content shape changes, patch when small.
     const pid = env.project_id || get().activeProjectId;
     if (!pid) return;
+    if (env.kind === "ui.filter_changed") {
+      // Only apply if it's for the active project; otherwise we'd flip the
+      // filter pill on a tab the user isn't looking at.
+      if (pid !== get().activeProjectId) return;
+      const payload = env.payload as { filter?: string } | undefined;
+      const f = payload?.filter as Filter | undefined;
+      if (f === "all" || f === "in_progress" || f === "open" || f === "verified" || f === "rejected") {
+        get().applyRemoteFilter(f);
+      }
+      return;
+    }
     if (env.kind.startsWith("project.")) {
       await get().loadProjects();
       return;

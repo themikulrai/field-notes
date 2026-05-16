@@ -28,3 +28,5 @@ asyncio_mode = "auto"
 testpaths = ["apps/api/tests", "packages/schema/tests", "packages/mcp_server/tests", "tests"]
 # importlib mode avoids module-name collisions when multiple test dirs share `__init__.py`.
 addopts = "--import-mode=importlib"
+# Repo root on sys.path so `tools/` can be imported by tests/ and tools/seed.py.
+pythonpath = ["."]

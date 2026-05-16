@@ -1,3 +1,57 @@
-# PLACEHOLDER — Chunk 5 fills this in (services, volumes, env, deploy strategy, health checks).
+# Fly.io app config for Field Notes.
+#
+# Single-process deployment: the FastAPI container also serves the built React
+# app (apps/web/dist) as static files at "/" via StaticFiles. SSE lives at
+# /events on the same origin so there's zero CORS preflight in production.
+#
+# To stand up a new app:
+#   fly launch --no-deploy --copy-config deploy/fly.toml
+#   fly postgres create --name field-notes-db --region sjc
+#   fly postgres attach field-notes-db
+#   fly secrets set FIELD_NOTES_KEY=$(openssl rand -hex 32)
+#   fly deploy --config deploy/fly.toml --remote-only
+#
+# Notes:
+#   * primary_region is "sjc" (San Jose) — change if you're not on the US west
+#     coast. iad / fra / etc. are all valid.
+#   * auto_stop_machines is OFF so long-lived SSE connections survive idle.
+#   * min_machines_running = 1 keeps one instance hot for SSE subscribers.
+
 app = "field-notes"
 primary_region = "sjc"
+
+[build]
+  dockerfile = "../apps/api/Dockerfile"
+
+[env]
+  PORT = "8000"
+  # The FastAPI app serves the built React app at "/" via StaticFiles.
+  FIELD_NOTES_STATIC_DIR = "/repo/apps/web/dist"
+  # Allow same-origin (no host) in CORS; localhost stays for ssh-tunnel dev.
+  FIELD_NOTES_CORS_ORIGINS = '["http://localhost:5173"]'
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 200
+    soft_limit = 150
+
+  # Healthcheck — matches the Dockerfile HEALTHCHECK.
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  cpus = 1

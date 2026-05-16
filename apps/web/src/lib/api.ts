@@ -16,7 +16,13 @@ const STORAGE_KEY = "field-notes-key";
 
 function envApiUrl(): string {
   const e = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
-  return e?.VITE_API_URL || "http://localhost:8000";
+  const url = e?.VITE_API_URL;
+  // Production build sets VITE_API_URL="" so we fall through to the current
+  // origin — the API serves the SPA from the same host on Fly.io. In dev we
+  // hit localhost:8000 by default so `npm run dev` Just Works.
+  if (url && url.length > 0) return url;
+  if (typeof window !== "undefined" && window.location?.origin) return window.location.origin;
+  return "http://localhost:8000";
 }
 function envDefaultKey(): string | undefined {
   const e = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;

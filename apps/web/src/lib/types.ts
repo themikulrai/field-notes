@@ -64,6 +64,7 @@ export interface Project {
   repo?: string | null;
   created_at: string;
   updated_at: string;
+  ui_filter?: "all" | CellStatus | null;
 }
 
 export interface Cell {
