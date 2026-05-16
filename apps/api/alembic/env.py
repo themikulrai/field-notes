@@ -1,23 +1,25 @@
-"""Alembic migration environment.
-
-Reads DATABASE_URL from env. The actual ORM metadata import is added in Chunk 2 when
-models.py is fleshed out.
-"""
+"""Alembic migration environment."""
 
 from __future__ import annotations
 
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+# Ensure `field_notes_api` is importable when running `alembic` from apps/api/.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from field_notes_api.models import Base  # noqa: E402
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Override sqlalchemy.url with env-driven DATABASE_URL.
 database_url = os.environ.get("DATABASE_URL", "")
 # Alembic itself uses a sync driver; strip the +asyncpg suffix if present.
 if database_url.startswith("postgresql+asyncpg://"):
@@ -25,8 +27,7 @@ if database_url.startswith("postgresql+asyncpg://"):
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 
-# TODO: Chunk 2 — import Base.metadata from field_notes_api.models and assign here.
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

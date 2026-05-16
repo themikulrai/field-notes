@@ -1,20 +1,33 @@
-"""FastAPI application entrypoint.
-
-This is intentionally minimal in Chunk 1. Chunk 2 will mount routers,
-add auth middleware, and wire SQLAlchemy + the events bus.
-"""
+"""FastAPI application entrypoint."""
 
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Field Notes API")
+from .config import get_settings
+from .routers import cells, events, projects, verdicts
+
+settings = get_settings()
+
+app = FastAPI(title="Field Notes API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.field_notes_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/healthz")
 async def healthz() -> dict[str, bool]:
-    """Liveness probe used by docker-compose and Fly.io."""
+    """Liveness probe used by docker-compose and Fly.io. Always public."""
     return {"ok": True}
 
 
-# TODO: Chunk 2 — include routers (projects, cells, verdicts, events) and auth dependency.
+app.include_router(projects.router)
+app.include_router(cells.router)
+app.include_router(verdicts.router)
+app.include_router(events.router)

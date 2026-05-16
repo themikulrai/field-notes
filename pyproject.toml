@@ -19,6 +19,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
+# FastAPI idioms: Depends/Body/Query/Header live in default args by design.
+# StrEnum (UP042) would change the wire format; keep (str, Enum) per the spec.
+ignore = ["B008", "UP042"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
