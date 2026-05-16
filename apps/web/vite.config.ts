@@ -1,7 +1,18 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig({
+// `test` is read by vitest's vite-config loader. Plain `vite build` ignores
+// unknown keys but tsc rejects them — cast to UserConfig to silence.
+const config = {
   plugins: [react()],
   server: { port: 5173 },
-});
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: ["./src/setupTests.ts"],
+    css: false,
+  },
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default defineConfig(config as any);
