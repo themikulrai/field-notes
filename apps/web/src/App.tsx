@@ -161,15 +161,6 @@ function Main() {
             total={total}
             onReorder={(cid, dir) => void reorderCell(cid, dir)}
             onDelete={(cid) => void deleteCell(cid)}
-            onFill={(cid) =>
-              void updateCell(cid, {
-                title: "Manual entry — investigation",
-                agent_id: "human-note",
-                status: "open",
-                conclusion:
-                  "Manual placeholder. Replace with a hypothesis, a link to a thread, or pull in an agent's report.",
-              })
-            }
           />
         );
       }

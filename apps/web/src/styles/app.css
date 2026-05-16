@@ -110,11 +110,11 @@
     margin-bottom: -1px;
   }
   .ptab:hover {
-    color: var(--ink-2);
-    background: color-mix(in oklch, var(--paper-2) 60%, transparent);
+    color: var(--ink);
+    background: color-mix(in oklch, var(--paper-3) 60%, transparent);
   }
   .ptab.is-active {
-    background: var(--paper-2);
+    background: var(--paper-3);
     color: var(--ink);
     border-color: var(--rule);
     box-shadow: 0 -3px 0 var(--c-blue) inset;
@@ -182,7 +182,7 @@
   .brand-mark {
     width: 40px; height: 40px; border: 1px solid var(--ink-2);
     display: grid; place-items: center; color: var(--ink);
-    background: var(--paper-2);
+    background: var(--paper-3);
   }
   .brand-name { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.1; }
   .brand-sub { font-size: 11px; color: var(--ink-3); letter-spacing: 0.02em; margin-top: 2px; }
@@ -501,7 +501,7 @@
   .empty-body { padding: 6px 0 4px; }
   .empty-prompt { color: var(--ink-3); font-size: 12.5px; }
 
-  .empty-state { text-align: center; padding: 60px 0; color: var(--ink-3); border: 1px dashed var(--rule-2); background: var(--paper-2); font-family: var(--mono); }
+  .empty-state { text-align: center; padding: 60px 0; color: var(--ink-3); border: 1px dashed var(--rule-2); background: var(--paper-3); font-family: var(--mono); }
 
   /* ---------- Markdown cell ---------- */
   .md-cell {
@@ -527,7 +527,7 @@
     padding: 1px 7px;
     border: 1px solid var(--rule-2);
     border-radius: 2px;
-    background: var(--paper-2);
+    background: var(--paper-3);
   }
   .md-body { min-width: 0; padding: 4px 0 6px; }
   .md-actions {
@@ -552,7 +552,7 @@
     border-radius: 3px;
     transition: background 160ms;
   }
-  .md-rendered:hover { background: color-mix(in oklch, var(--paper-2) 50%, transparent); }
+  .md-rendered:hover { background: color-mix(in oklch, var(--paper-3) 50%, transparent); }
   .md-rendered > :first-child { margin-top: 0; }
   .md-rendered > :last-child { margin-bottom: 0; }
   .md-rendered h1 {
@@ -629,7 +629,7 @@
   }
   .md-editor {
     width: 100%;
-    background: var(--paper-2);
+    background: var(--paper-3);
     border: 1px solid var(--c-blue);
     color: var(--ink);
     font-family: var(--mono);
@@ -652,7 +652,7 @@
   .md-editor-hint kbd {
     font-family: var(--mono);
     font-size: 10px;
-    background: var(--paper-2);
+    background: var(--paper-3);
     border: 1px solid var(--rule-2);
     border-bottom-width: 2px;
     padding: 0 4px;
@@ -690,8 +690,8 @@
   .inserter-plus {
     display: inline-flex; align-items: center; gap: 5px;
     font-size: 10px;
-    color: var(--ink-3);
-    background: var(--paper-2);
+    color: var(--ink-2);
+    background: var(--paper-3);
     border: 1px solid var(--rule-2);
     padding: 3px 9px;
     border-radius: 12px;
@@ -706,7 +706,7 @@
     top: calc(100% - 4px);
     display: flex;
     gap: 0;
-    background: var(--paper-2);
+    background: var(--paper-3);
     border: 1px solid var(--rule-2);
     border-radius: 3px;
     box-shadow: 0 8px 24px -10px rgba(0,0,0,0.5);

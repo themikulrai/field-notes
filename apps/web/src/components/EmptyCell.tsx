@@ -6,10 +6,9 @@ interface Props {
   total: number;
   onReorder: (cid: string, dir: "up" | "down") => void;
   onDelete: (cid: string) => void;
-  onFill: (cid: string) => void;
 }
 
-export function EmptyCell({ cell, index, total, onReorder, onDelete, onFill }: Props) {
+export function EmptyCell({ cell, index, total, onReorder, onDelete }: Props) {
   return (
     <article className="cell cell--empty" data-screen-label={`cell-${index + 1}-empty`}>
       <div className="rail" aria-hidden="true" />
@@ -79,12 +78,7 @@ export function EmptyCell({ cell, index, total, onReorder, onDelete, onFill }: P
         </div>
       </header>
       <div className="empty-body">
-        <div className="empty-prompt mono">
-          waiting for an agent to push a result, or
-          <button className="link-btn" onClick={() => onFill(cell.id)}>
-            {" "}fill with a sample entry →
-          </button>
-        </div>
+        <div className="empty-prompt mono">waiting for an agent to push a result</div>
       </div>
     </article>
   );
