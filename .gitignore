@@ -33,3 +33,6 @@ apps/web/dist/
 .idea/
 .vscode/
 
+
+# always-on runtime state (pgdata, api.pid, api.log)
+data/
