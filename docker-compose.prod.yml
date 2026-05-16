@@ -1,0 +1,3 @@
+# TODO: Chunk 5 — production docker-compose (Fly.io / Caddy reverse proxy, prebuilt images, real secrets).
+# Placeholder only; do not use for deployment yet.
+services: {}

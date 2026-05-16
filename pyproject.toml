@@ -1,0 +1,27 @@
+[project]
+name = "field-notes-monorepo"
+version = "0.1.0"
+description = "Field Notes — ML research notebook with MCP-driven agents"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv.workspace]
+members = ["apps/api", "packages/schema", "packages/mcp_server"]
+
+[tool.uv.sources]
+field-notes-schema = { workspace = true }
+field-notes-api = { workspace = true }
+field-notes-mcp = { workspace = true }
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["apps/api/tests", "packages/schema/tests", "packages/mcp_server/tests", "tests"]
+# importlib mode avoids module-name collisions when multiple test dirs share `__init__.py`.
+addopts = "--import-mode=importlib"

@@ -1,0 +1,10 @@
+/* PLACEHOLDER — Chunk 3 will copy CSS from the prototype here. */
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 2rem;
+}
