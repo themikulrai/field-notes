@@ -82,6 +82,8 @@ interface StoreState {
   }) => Promise<void>;
   patchCell: (pid: string, cell: Cell) => void;
   removeCell: (pid: string, cid: string) => void;
+
+  clearError: () => void;
 }
 
 // Helper: find cell + project for a given cell id.
@@ -104,6 +106,8 @@ export const useStore = create<StoreState>((set, get) => ({
   collapsedSections: loadCollapsed(),
   loading: false,
   error: null,
+
+  clearError: () => set({ error: null }),
 
   loadProjects: async () => {
     set({ loading: true, error: null });

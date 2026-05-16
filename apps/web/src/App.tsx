@@ -9,6 +9,7 @@ import { fmtAgo } from "./lib/format";
 import { inferSections, type SectionNode } from "./lib/sections";
 
 import { KeyGate } from "./components/KeyGate";
+import { ErrorBanner } from "./components/ErrorBanner";
 import { ProjectTabStrip } from "./components/ProjectTabStrip";
 import { FilterBar } from "./components/FilterBar";
 import { Cell } from "./components/Cell";
@@ -93,6 +94,7 @@ function Main() {
   if (!activeProject) {
     return (
       <div className="page">
+        <ErrorBanner />
         <div className="empty-create-page">
           <div className="mono">No projects yet.</div>
           <button
@@ -182,6 +184,7 @@ function Main() {
 
   return (
     <div className="page">
+      <ErrorBanner />
       <header className="top">
         <ProjectTabStrip
           projects={projects}
