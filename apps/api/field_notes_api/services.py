@@ -92,6 +92,7 @@ def project_to_read(p: Project) -> ProjectRead:
         repo=p.repo,
         created_at=p.created_at,
         updated_at=p.updated_at,
+        ui_filter=p.ui_filter,
     )
 
 

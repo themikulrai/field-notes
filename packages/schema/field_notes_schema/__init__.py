@@ -90,6 +90,9 @@ class DeepBlock(BaseModel):
     logs: str = ""
 
 
+UiFilter = Literal["all", "in_progress", "open", "verified", "rejected"]
+
+
 class ProjectCreate(BaseModel):
     name: str
     subtitle: str | None = None
@@ -100,12 +103,18 @@ class ProjectRead(ProjectCreate):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    ui_filter: UiFilter | None = None
 
 
 class ProjectUpdate(BaseModel):
     name: str | None = None
     subtitle: str | None = None
     repo: str | None = None
+    ui_filter: UiFilter | None = None
+
+
+class UiFilterSet(BaseModel):
+    filter: UiFilter
 
 
 class CellCreate(BaseModel):
@@ -196,6 +205,8 @@ __all__ = [
     "ProjectRead",
     "ProjectUpdate",
     "ReorderRequest",
+    "UiFilter",
+    "UiFilterSet",
     "Verdict",
     "VerdictSet",
     "VerdictState",

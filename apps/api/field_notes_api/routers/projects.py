@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from field_notes_schema import ProjectCreate, ProjectRead, ProjectUpdate
+from field_notes_schema import ProjectCreate, ProjectRead, ProjectUpdate, UiFilterSet
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -110,3 +110,33 @@ async def list_cells(pid: uuid.UUID, session: AsyncSession = Depends(get_session
     )
     cells = result.scalars().all()
     return [cell_to_read(c, c.verdict) for c in cells]
+
+
+@router.post("/{pid}/ui-filter", response_model=ProjectRead)
+async def set_ui_filter(
+    pid: uuid.UUID,
+    body: UiFilterSet,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> ProjectRead:
+    """Persist the project's UI filter and broadcast `ui.filter_changed`.
+
+    The web Zustand store listens for this event over SSE and updates its
+    filter pill. The MCP `set_filter` tool calls this endpoint.
+    """
+    p = await session.get(Project, pid)
+    if p is None:
+        raise HTTPException(status_code=404, detail="project not found")
+    p.ui_filter = body.filter
+    await session.flush()
+    env = await emit_event(
+        session,
+        "ui.filter_changed",
+        project_id=p.id,
+        payload={"filter": body.filter},
+        source=_source(request),
+    )
+    await session.commit()
+    await session.refresh(p)
+    schedule_publish(env)
+    return project_to_read(p)
