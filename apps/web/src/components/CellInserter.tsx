@@ -3,9 +3,10 @@ import { useState } from "react";
 interface Props {
   onAddMarkdown: () => void;
   onAddEmpty: () => void;
+  onAddSection: () => void;
 }
 
-export function CellInserter({ onAddMarkdown, onAddEmpty }: Props) {
+export function CellInserter({ onAddMarkdown, onAddEmpty, onAddSection }: Props) {
   const [open, setOpen] = useState(false);
   return (
     <div
@@ -65,6 +66,23 @@ export function CellInserter({ onAddMarkdown, onAddEmpty }: Props) {
               />
             </svg>
             empty cell
+          </button>
+          <button
+            onClick={() => {
+              onAddSection();
+              setOpen(false);
+            }}
+          >
+            <svg viewBox="0 0 16 16" width="12" height="12">
+              <path
+                d="M2 4h12 M2 8h9 M2 12h6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+              />
+            </svg>
+            section
           </button>
         </div>
       )}
