@@ -163,11 +163,14 @@ export const useStore = create<StoreState>((set, get) => ({
 
   deleteProject: async (pid) => {
     const prev = get().projects;
-    set({ projects: prev.filter((p) => p.id !== pid) });
+    const prevActive = get().activeProjectId;
+    const remaining = prev.filter((p) => p.id !== pid);
+    const nextActive = prevActive === pid ? (remaining[0]?.id ?? null) : prevActive;
+    set({ projects: remaining, activeProjectId: nextActive });
     try {
       await api.deleteProject(pid);
     } catch (e) {
-      set({ projects: prev, error: (e as Error).message });
+      set({ projects: prev, activeProjectId: prevActive, error: (e as Error).message });
     }
   },
 

@@ -112,4 +112,48 @@ describe("store optimistic updates", () => {
     const raw = localStorage.getItem("field-notes-collapsed");
     expect(raw && JSON.parse(raw).p1["h:0"]).toBe(true);
   });
+
+  it("deleteProject resets activeProjectId to a remaining project when the active one is deleted", async () => {
+    const { useStore } = await import("./store");
+    useStore.setState({
+      projects: [
+        { id: "p1", name: "P1", created_at: "", updated_at: "" },
+        { id: "p2", name: "P2", created_at: "", updated_at: "" },
+      ],
+      activeProjectId: "p1",
+      cellsByProject: {},
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 })) as typeof fetch;
+    await useStore.getState().deleteProject("p1");
+    expect(useStore.getState().projects.map((p) => p.id)).toEqual(["p2"]);
+    expect(useStore.getState().activeProjectId).toBe("p2");
+  });
+
+  it("deleteProject sets activeProjectId to null when last project is deleted", async () => {
+    const { useStore } = await import("./store");
+    useStore.setState({
+      projects: [{ id: "only", name: "P", created_at: "", updated_at: "" }],
+      activeProjectId: "only",
+      cellsByProject: {},
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 })) as typeof fetch;
+    await useStore.getState().deleteProject("only");
+    expect(useStore.getState().projects).toEqual([]);
+    expect(useStore.getState().activeProjectId).toBeNull();
+  });
+
+  it("deleteProject leaves activeProjectId alone when a non-active project is deleted", async () => {
+    const { useStore } = await import("./store");
+    useStore.setState({
+      projects: [
+        { id: "p1", name: "P1", created_at: "", updated_at: "" },
+        { id: "p2", name: "P2", created_at: "", updated_at: "" },
+      ],
+      activeProjectId: "p2",
+      cellsByProject: {},
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 })) as typeof fetch;
+    await useStore.getState().deleteProject("p1");
+    expect(useStore.getState().activeProjectId).toBe("p2");
+  });
 });

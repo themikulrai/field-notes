@@ -1,15 +1,15 @@
   :root {
-    /* Deep blue night palette */
-    --paper:        #0e1420;
-    --paper-2:      #131b2c;
-    --paper-3:      #1a2336;
-    --paper-4:      #212c44;
-    --ink:          #e6ecf6;
-    --ink-2:        #aebbd2;
-    --ink-3:        #7886a2;
-    --ink-4:        #4d5878;
-    --rule:         #243150;
-    --rule-2:       #324167;
+    /* Deep blue night palette — lighter tier */
+    --paper:        #1a2336;
+    --paper-2:      #212c44;
+    --paper-3:      #2a3654;
+    --paper-4:      #344166;
+    --ink:          #eef2fa;
+    --ink-2:        #b7c2da;
+    --ink-3:        #8392ad;
+    --ink-4:        #5a6585;
+    --rule:         #2e3b5c;
+    --rule-2:       #3c4d76;
 
     /* Status colors — saturated for dark bg */
     --c-amber:      oklch(0.78 0.15 75);
@@ -37,9 +37,9 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     background-image:
-      radial-gradient(at 90% -5%, oklch(0.40 0.12 245 / 0.45), transparent 55%),
-      radial-gradient(at -5% 100%, oklch(0.35 0.10 260 / 0.40), transparent 50%),
-      radial-gradient(at 50% 50%, oklch(0.20 0.05 250 / 0.4), transparent 80%);
+      radial-gradient(at 90% -5%, oklch(0.48 0.10 245 / 0.32), transparent 55%),
+      radial-gradient(at -5% 100%, oklch(0.42 0.08 260 / 0.28), transparent 50%),
+      radial-gradient(at 50% 50%, oklch(0.30 0.04 250 / 0.25), transparent 80%);
     background-attachment: fixed;
     min-height: 100vh;
   }
