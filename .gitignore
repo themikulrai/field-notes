@@ -33,5 +33,3 @@ apps/web/dist/
 .idea/
 .vscode/
 
-# uv
-uv.lock
