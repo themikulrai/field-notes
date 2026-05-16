@@ -28,5 +28,5 @@ COPY --from=web-builder /web/dist ./apps/web/dist
 ENV PYTHONPATH=/repo
 ENV FIELD_NOTES_STATIC_DIR=/repo/apps/web/dist
 EXPOSE 8000
-HEALTHCHECK --interval=10s CMD curl -fsS http://localhost:8000/healthz || exit 1
-CMD ["uv", "run", "--package", "field-notes-api", "uvicorn", "field_notes_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+HEALTHCHECK --interval=10s CMD curl -fsS http://localhost:${PORT:-8000}/healthz || exit 1
+CMD ["sh", "-c", "uv run --package field-notes-api uvicorn field_notes_api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
