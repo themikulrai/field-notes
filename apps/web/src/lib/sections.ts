@@ -1,21 +1,30 @@
-// Walks a cell list and groups cells under markdown ## / ### headings.
+// Walks a cell list and groups cells under markdown # / ## / ### headings.
 // Output is a tree of SectionNode for the renderer; collapse state survives
 // reorder because keys are derived from cell IDs.
+//
+// Levels follow the markdown heading depth:
+//   `# title`   -> level 1
+//   `## title`  -> level 2
+//   `### title` -> level 3
+// A heading at level N nests under the closest open heading of level < N, so
+// H3s tuck under their H2 which tucks under its H1. Headings shallower than or
+// equal to the current depth close the stack first.
 
 import type { Cell } from "./types";
 
+export type SectionLevel = 1 | 2 | 3;
 export type SectionNodeKind = "section" | "cell" | "markdown";
 
 export interface SectionNode {
   kind: SectionNodeKind;
-  level?: 2 | 3;
+  level?: SectionLevel;
   heading?: string;
   cell?: Cell;
   key: string;
   children?: SectionNode[];
 }
 
-function headingLevel(body: string | null | undefined): 2 | 3 | null {
+function headingLevel(body: string | null | undefined): SectionLevel | null {
   if (!body) return null;
   // Find first non-blank line; that's where the heading must live to count.
   const lines = body.split("\n");
@@ -24,6 +33,7 @@ function headingLevel(body: string | null | undefined): 2 | 3 | null {
     if (!line.trim()) continue;
     if (line.startsWith("### ")) return 3;
     if (line.startsWith("## ")) return 2;
+    if (line.startsWith("# ")) return 1;
     return null;
   }
   return null;
@@ -36,77 +46,50 @@ function headingText(body: string): string {
     if (!line.trim()) continue;
     if (line.startsWith("### ")) return line.slice(4).trim();
     if (line.startsWith("## ")) return line.slice(3).trim();
+    if (line.startsWith("# ")) return line.slice(2).trim();
     return "";
   }
   return "";
 }
 
 export function inferSections(cells: Cell[]): SectionNode[] {
-  // Two-pass: build a flat list of tokens, then fold into nested sections.
-  type Tok =
-    | { t: "h2"; cell: Cell; key: string; text: string }
-    | { t: "h3"; cell: Cell; key: string; text: string }
-    | { t: "cell"; cell: Cell; key: string }
-    | { t: "md"; cell: Cell; key: string };
-
-  const tokens: Tok[] = cells.map((cell, idx) => {
-    const key = `${cell.id}#${idx}`;
-    if (cell.kind === "markdown") {
-      const lvl = headingLevel(cell.body);
-      if (lvl === 2) return { t: "h2", cell, key, text: headingText(cell.body || "") };
-      if (lvl === 3) return { t: "h3", cell, key, text: headingText(cell.body || "") };
-      return { t: "md", cell, key };
-    }
-    return { t: "cell", cell, key };
-  });
-
-  // Fold with a stack: top is current open section (level 2 or 3).
   const root: SectionNode[] = [];
-  let curH2: SectionNode | null = null;
-  let curH3: SectionNode | null = null;
+  // Stack of open section nodes, deepest-last.
+  const stack: SectionNode[] = [];
 
   const push = (n: SectionNode) => {
-    const target = curH3 ?? curH2;
+    const target = stack.length ? stack[stack.length - 1] : null;
     if (target) target.children!.push(n);
     else root.push(n);
   };
 
-  for (const tok of tokens) {
-    if (tok.t === "h2") {
-      const node: SectionNode = {
-        kind: "section",
-        level: 2,
-        heading: tok.text,
-        cell: tok.cell,
-        key: tok.key,
-        children: [],
-      };
-      root.push(node);
-      curH2 = node;
-      curH3 = null;
-      continue;
+  cells.forEach((cell, idx) => {
+    const key = `${cell.id}#${idx}`;
+    if (cell.kind === "markdown") {
+      const lvl = headingLevel(cell.body);
+      if (lvl) {
+        // Close any open sections at the same or deeper level.
+        while (stack.length && (stack[stack.length - 1].level ?? 0) >= lvl) {
+          stack.pop();
+        }
+        const node: SectionNode = {
+          kind: "section",
+          level: lvl,
+          heading: headingText(cell.body || ""),
+          cell,
+          key,
+          children: [],
+        };
+        push(node);
+        stack.push(node);
+        return;
+      }
+      // Plain note (no heading) — attaches like a regular cell.
+      push({ kind: "markdown", cell, key });
+      return;
     }
-    if (tok.t === "h3") {
-      const node: SectionNode = {
-        kind: "section",
-        level: 3,
-        heading: tok.text,
-        cell: tok.cell,
-        key: tok.key,
-        children: [],
-      };
-      if (curH2) curH2.children!.push(node);
-      else root.push(node);
-      curH3 = node;
-      continue;
-    }
-    if (tok.t === "md") {
-      push({ kind: "markdown", cell: tok.cell, key: tok.key });
-      continue;
-    }
-    // plain cell
-    push({ kind: "cell", cell: tok.cell, key: tok.key });
-  }
+    push({ kind: "cell", cell, key });
+  });
 
   return root;
 }

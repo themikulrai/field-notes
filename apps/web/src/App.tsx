@@ -17,6 +17,7 @@ import { MarkdownCell } from "./components/MarkdownCell";
 import { EmptyCell } from "./components/EmptyCell";
 import { CellInserter } from "./components/CellInserter";
 import { SectionGroup } from "./components/SectionGroup";
+import { TableOfContents } from "./components/TableOfContents";
 import type { Cell as CellData, CellStatus } from "./lib/types";
 
 export default function App() {
@@ -122,7 +123,7 @@ function Main() {
       return (
         <SectionGroup
           key={sectionKey}
-          level={node.level || 2}
+          level={(node.level ?? 2) as 1 | 2 | 3}
           heading={node.heading || ""}
           collapsed={collapsed}
           onToggle={() => toggleSection(activeProject.id, sectionKey)}
@@ -280,6 +281,8 @@ function Main() {
           />
         )}
       </main>
+
+      <TableOfContents sections={sections} />
 
       <footer className="foot mono">
         <span>field notes · local working copy</span>

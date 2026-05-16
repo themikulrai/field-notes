@@ -1,4 +1,4 @@
-// Collapsible markdown-heading section. Title is rendered as <h2>/<h3>.
+// Collapsible markdown-heading section. Title is rendered as <h1>/<h2>/<h3>.
 // Also exposes edit/delete/reorder controls so a heading cell can be managed
 // through the UI just like a regular MarkdownCell.
 
@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "re
 import type { Cell } from "../lib/types";
 
 interface Props {
-  level: 2 | 3;
+  level: 1 | 2 | 3;
   heading: string;
   collapsed: boolean;
   onToggle: () => void;
@@ -27,7 +27,7 @@ interface Props {
 function isHeadingBodyEmpty(body: string | null | undefined): boolean {
   if (!body) return true;
   const t = body.trim();
-  return t === "##" || t === "###";
+  return t === "#" || t === "##" || t === "###";
 }
 
 export function SectionGroup({
@@ -43,7 +43,7 @@ export function SectionGroup({
   onDelete,
   onChange,
 }: Props) {
-  const Head = level === 2 ? "h2" : "h3";
+  const Head: "h1" | "h2" | "h3" = level === 1 ? "h1" : level === 2 ? "h2" : "h3";
 
   const [editing, setEditing] = useState<boolean>(
     !!cell && !!onChange && isHeadingBodyEmpty(cell.body),
@@ -77,7 +77,11 @@ export function SectionGroup({
   const canManage = !!cell && !!onChange && !!onDelete && !!onReorder && index !== undefined && total !== undefined;
 
   return (
-    <section className={`section-group section-level-${level}`}>
+    <section
+      className={`section-group section-level-${level}`}
+      data-level={level}
+      data-section-id={cell?.id}
+    >
       <header className="section-heading" aria-expanded={!collapsed}>
         <span
           className={`section-caret mono ${!collapsed ? "is-open" : ""}`}
@@ -92,7 +96,7 @@ export function SectionGroup({
             <textarea
               ref={taRef}
               className="md-editor mono section-editor"
-              placeholder={"## section title\n\nOptional body under the heading."}
+              placeholder={`${"#".repeat(level)} section title\n\nOptional body under the heading.`}
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);
@@ -115,7 +119,7 @@ export function SectionGroup({
             />
             <div className="md-editor-hint mono">
               <span>
-                <kbd>⌘</kbd>+<kbd>↵</kbd> save · <kbd>esc</kbd> cancel · keep <code>## </code> prefix to stay a section
+                <kbd>⌘</kbd>+<kbd>↵</kbd> save · <kbd>esc</kbd> cancel · keep <code>{"#".repeat(level) + " "}</code> prefix to stay a section
               </span>
             </div>
           </div>
