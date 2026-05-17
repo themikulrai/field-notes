@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +13,15 @@ class Settings(BaseSettings):
 
     field_notes_key: str = Field(default="changeme")
     database_url: str = Field(default="sqlite+aiosqlite:///:memory:")
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_pg_url(cls, v: str) -> str:
+        # Heroku injects `postgres://...`; SQLAlchemy 2 wants `postgresql://`
+        # and we need the asyncpg driver at runtime.
+        if isinstance(v, str) and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        return v
     field_notes_cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     # SSE keepalive interval. Overridable in tests so we don't wait 25s for a keepalive assertion.
     field_notes_sse_keepalive_seconds: float = 25.0
