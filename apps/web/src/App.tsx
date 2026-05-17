@@ -17,6 +17,7 @@ import { MarkdownCell } from "./components/MarkdownCell";
 import { EmptyCell } from "./components/EmptyCell";
 import { CellInserter } from "./components/CellInserter";
 import { SectionGroup } from "./components/SectionGroup";
+import { TableOfContents } from "./components/TableOfContents";
 import type { Cell as CellData, CellStatus } from "./lib/types";
 
 export default function App() {
@@ -45,6 +46,7 @@ function Main() {
   const updateCell = useStore((s) => s.updateCell);
   const addMarkdownCell = useStore((s) => s.addMarkdownCell);
   const addEmptyCell = useStore((s) => s.addEmptyCell);
+  const addSectionCell = useStore((s) => s.addSectionCell);
   const toggleSection = useStore((s) => s.toggleSection);
 
   // Load projects on mount
@@ -121,10 +123,16 @@ function Main() {
       return (
         <SectionGroup
           key={sectionKey}
-          level={node.level || 2}
+          level={(node.level ?? 2) as 1 | 2 | 3}
           heading={node.heading || ""}
           collapsed={collapsed}
           onToggle={() => toggleSection(activeProject.id, sectionKey)}
+          cell={node.cell}
+          index={idx}
+          total={total}
+          onReorder={(cid, dir) => void reorderCell(cid, dir)}
+          onDelete={(cid) => void deleteCell(cid)}
+          onChange={(cid, body) => void updateCell(cid, { body })}
         >
           {(node.children || []).map((child, i) => renderNode(child, i, (node.children || []).length))}
         </SectionGroup>
@@ -154,15 +162,6 @@ function Main() {
             total={total}
             onReorder={(cid, dir) => void reorderCell(cid, dir)}
             onDelete={(cid) => void deleteCell(cid)}
-            onFill={(cid) =>
-              void updateCell(cid, {
-                title: "Manual entry — investigation",
-                agent_id: "human-note",
-                status: "open",
-                conclusion:
-                  "Manual placeholder. Replace with a hypothesis, a link to a thread, or pull in an agent's report.",
-              })
-            }
           />
         );
       }
@@ -239,6 +238,7 @@ function Main() {
           onSetFilter={setFilter}
           onAddMarkdown={() => void addMarkdownCell(activeProject.id, 0)}
           onAddEmpty={() => void addEmptyCell(activeProject.id, 0)}
+          onAddSection={() => void addSectionCell(activeProject.id, 0)}
         />
       </header>
 
@@ -252,6 +252,7 @@ function Main() {
           <CellInserter
             onAddMarkdown={() => void addMarkdownCell(activeProject.id, 0)}
             onAddEmpty={() => void addEmptyCell(activeProject.id, 0)}
+            onAddSection={() => void addSectionCell(activeProject.id, 0)}
           />
         )}
         {sections.map((node, i) => {
@@ -262,6 +263,7 @@ function Main() {
                 key={`${node.key}-ins`}
                 onAddMarkdown={() => void addMarkdownCell(activeProject.id, i + 1)}
                 onAddEmpty={() => void addEmptyCell(activeProject.id, i + 1)}
+                onAddSection={() => void addSectionCell(activeProject.id, i + 1)}
               />
             ) : null;
           return (
@@ -275,9 +277,12 @@ function Main() {
           <CellInserter
             onAddMarkdown={() => void addMarkdownCell(activeProject.id, cells.length)}
             onAddEmpty={() => void addEmptyCell(activeProject.id, cells.length)}
+            onAddSection={() => void addSectionCell(activeProject.id, cells.length)}
           />
         )}
       </main>
+
+      <TableOfContents sections={sections} />
 
       <footer className="foot mono">
         <span>field notes · local working copy</span>

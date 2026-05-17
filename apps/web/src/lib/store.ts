@@ -68,6 +68,7 @@ interface StoreState {
   deleteCell: (cid: string) => Promise<void>;
   addMarkdownCell: (pid: string, atIndex: number) => Promise<void>;
   addEmptyCell: (pid: string, atIndex: number) => Promise<void>;
+  addSectionCell: (pid: string, atIndex: number) => Promise<void>;
 
   toggleSection: (pid: string, key: string) => void;
   isSectionCollapsed: (pid: string, key: string) => boolean;
@@ -304,6 +305,14 @@ export const useStore = create<StoreState>((set, get) => ({
     const arr = get().cellsByProject[pid] || [];
     const after = atIndex > 0 ? arr[atIndex - 1]?.id ?? null : null;
     await get().createCell(pid, { kind: "empty" as CellKind, after_cell_id: after });
+  },
+  addSectionCell: async (pid, atIndex) => {
+    const arr = get().cellsByProject[pid] || [];
+    const after = atIndex > 0 ? arr[atIndex - 1]?.id ?? null : null;
+    // Body is "## " (trailing space) so inferSections treats it as a heading
+    // even though the heading text is empty — SectionGroup starts in edit mode
+    // when the heading text is effectively empty.
+    await get().createCell(pid, { kind: "markdown" as CellKind, after_cell_id: after, body: "## " });
   },
 
   toggleSection: (pid, key) => {

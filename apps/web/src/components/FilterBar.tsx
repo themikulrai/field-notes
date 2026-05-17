@@ -8,6 +8,7 @@ interface Props {
   onSetFilter: (f: "all" | CellStatus) => void;
   onAddMarkdown: () => void;
   onAddEmpty: () => void;
+  onAddSection: () => void;
 }
 
 function FilterPill({
@@ -36,7 +37,7 @@ function FilterPill({
   );
 }
 
-export function FilterBar({ filter, counts, onSetFilter, onAddMarkdown, onAddEmpty }: Props) {
+export function FilterBar({ filter, counts, onSetFilter, onAddMarkdown, onAddEmpty, onAddSection }: Props) {
   return (
     <div className="filter-bar">
       <div className="filter-pills">
@@ -85,6 +86,23 @@ export function FilterBar({ filter, counts, onSetFilter, onAddMarkdown, onAddEmp
             />
           </svg>
           add cell
+        </button>
+        <button
+          className="ghost-btn mono"
+          onClick={onAddSection}
+          type="button"
+          title="add a collapsible section heading"
+        >
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path
+              d="M2 4h12 M2 8h9 M2 12h6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+          add section
         </button>
       </div>
     </div>
