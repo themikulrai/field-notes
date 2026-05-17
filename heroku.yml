@@ -1,0 +1,11 @@
+build:
+  docker:
+    web: Dockerfile
+  config:
+    DOCKER_BUILDKIT: "1"
+run:
+  web: uv run --package field-notes-api uvicorn field_notes_api.main:app --host 0.0.0.0 --port $PORT
+release:
+  command:
+    - cd apps/api && uv run --package field-notes-api alembic upgrade head
+  image: web

@@ -21,7 +21,10 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 database_url = os.environ.get("DATABASE_URL", "")
-# Alembic itself uses a sync driver; strip the +asyncpg suffix if present.
+# Alembic itself uses a sync driver; normalize Heroku's `postgres://` and
+# strip the +asyncpg suffix if present.
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
 if database_url.startswith("postgresql+asyncpg://"):
     database_url = database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
 if database_url:
