@@ -1,6 +1,6 @@
 build:
   docker:
-    web: apps/api/Dockerfile
+    web: Dockerfile
   config:
     DOCKER_BUILDKIT: "1"
 run:

@@ -21,7 +21,7 @@ app = "field-notes"
 primary_region = "sjc"
 
 [build]
-  dockerfile = "../apps/api/Dockerfile"
+  dockerfile = "../Dockerfile"
 
 [env]
   PORT = "8000"
