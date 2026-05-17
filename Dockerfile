@@ -6,7 +6,10 @@
 FROM node:20-alpine AS web-builder
 WORKDIR /web
 COPY apps/web/package*.json ./
-RUN npm ci --no-audit --no-fund
+# npm install (not npm ci): esbuild's per-platform optional deps confuse
+# `npm ci` strict mode — the lockfile lists only a few platform binaries
+# while the build host needs linux-x64 which gets re-resolved here.
+RUN npm install --no-audit --no-fund
 COPY apps/web/ ./
 # Empty VITE_API_URL means "same origin" — the api.ts fallback uses
 # window.location.origin at runtime. CORS becomes a non-issue.
