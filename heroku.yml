@@ -7,5 +7,5 @@ run:
   web: uv run --package field-notes-api uvicorn field_notes_api.main:app --host 0.0.0.0 --port $PORT
 release:
   command:
-    - alembic -c apps/api/alembic.ini upgrade head
+    - uv run --package field-notes-api alembic -c apps/api/alembic.ini upgrade head
   image: web
