@@ -242,47 +242,48 @@ function Main() {
         />
       </header>
 
-      <main className="cells">
-        {visibleCells.length === 0 && (
-          <div className="empty-state mono">
-            no cells in <strong>{filter === "all" ? "this view" : filter}</strong> right now.
-          </div>
-        )}
-        {visibleCells.length > 0 && (
-          <CellInserter
-            onAddMarkdown={() => void addMarkdownCell(activeProject.id, 0)}
-            onAddEmpty={() => void addEmptyCell(activeProject.id, 0)}
-            onAddSection={() => void addSectionCell(activeProject.id, 0)}
-          />
-        )}
-        {sections.map((node, i) => {
-          const out = renderNode(node, i, sections.length);
-          const inserter =
-            i < sections.length - 1 ? (
-              <CellInserter
-                key={`${node.key}-ins`}
-                onAddMarkdown={() => void addMarkdownCell(activeProject.id, i + 1)}
-                onAddEmpty={() => void addEmptyCell(activeProject.id, i + 1)}
-                onAddSection={() => void addSectionCell(activeProject.id, i + 1)}
-              />
-            ) : null;
-          return (
-            <span key={node.key}>
-              {out}
-              {inserter}
-            </span>
-          );
-        })}
-        {visibleCells.length > 0 && (
-          <CellInserter
-            onAddMarkdown={() => void addMarkdownCell(activeProject.id, cells.length)}
-            onAddEmpty={() => void addEmptyCell(activeProject.id, cells.length)}
-            onAddSection={() => void addSectionCell(activeProject.id, cells.length)}
-          />
-        )}
-      </main>
-
-      <TableOfContents sections={sections} />
+      <div className="page-body">
+        <TableOfContents sections={sections} />
+        <main className="cells">
+          {visibleCells.length === 0 && (
+            <div className="empty-state mono">
+              no cells in <strong>{filter === "all" ? "this view" : filter}</strong> right now.
+            </div>
+          )}
+          {visibleCells.length > 0 && (
+            <CellInserter
+              onAddMarkdown={() => void addMarkdownCell(activeProject.id, 0)}
+              onAddEmpty={() => void addEmptyCell(activeProject.id, 0)}
+              onAddSection={() => void addSectionCell(activeProject.id, 0)}
+            />
+          )}
+          {sections.map((node, i) => {
+            const out = renderNode(node, i, sections.length);
+            const inserter =
+              i < sections.length - 1 ? (
+                <CellInserter
+                  key={`${node.key}-ins`}
+                  onAddMarkdown={() => void addMarkdownCell(activeProject.id, i + 1)}
+                  onAddEmpty={() => void addEmptyCell(activeProject.id, i + 1)}
+                  onAddSection={() => void addSectionCell(activeProject.id, i + 1)}
+                />
+              ) : null;
+            return (
+              <span key={node.key}>
+                {out}
+                {inserter}
+              </span>
+            );
+          })}
+          {visibleCells.length > 0 && (
+            <CellInserter
+              onAddMarkdown={() => void addMarkdownCell(activeProject.id, cells.length)}
+              onAddEmpty={() => void addEmptyCell(activeProject.id, cells.length)}
+              onAddSection={() => void addSectionCell(activeProject.id, cells.length)}
+            />
+          )}
+        </main>
+      </div>
 
       <footer className="foot mono">
         <span>field notes · local working copy</span>

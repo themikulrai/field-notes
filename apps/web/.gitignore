@@ -4,3 +4,5 @@ dist/
 .vite/
 *.tsbuildinfo
 .tsbuildinfo-node/
+test-results/
+playwright-report/
