@@ -209,6 +209,7 @@ export function buildSandboxSrcdoc(visual: VisualSandbox): string {
   `;
   return `<!doctype html>
 <html><head>
+  <style>body { overflow-wrap: anywhere; }</style>
   <style>${visual.css || ""}</style>
   ${SANDBOX_LIBS}
 </head><body>${visual.html || ""}<script>${resizer}</script><script>${visual.js || ""}</script></body></html>`;
@@ -219,9 +220,10 @@ function SandboxChart({ visual }: { visual: VisualSandbox }) {
   const [h, setH] = useState(160);
   useEffect(() => {
     function onMsg(e: MessageEvent) {
+      if (e.source !== ref.current?.contentWindow) return;
       const data = e.data as { type?: string; h?: number };
       if (data && data.type === "fn-resize" && typeof data.h === "number") {
-        setH(Math.min(1200, Math.max(80, data.h + 4)));
+        setH(Math.max(80, data.h + 4));
       }
     }
     window.addEventListener("message", onMsg);
