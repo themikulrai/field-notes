@@ -125,7 +125,7 @@ async def test_agent_vs_human_boundary(mcp_client, human_client) -> None:
     assert r.json()["locked"] is True
 
     # --- 6) Agent tries to update the locked cell -> structured locked_cell error ---
-    upd = await T.t_update_cell(mcp_client, T.UpdateCellInput(cell_id=cid, title="agent overwrite attempt"))
+    upd = await T.t_update_cell(mcp_client, T.UpdateCellInput(op="patch", cell_id=cid, title="agent overwrite attempt"))
     assert upd.get("error") == "locked_cell"
     assert upd["cell_id"] == str(cid)
     assert "locked" in upd["message"].lower()
