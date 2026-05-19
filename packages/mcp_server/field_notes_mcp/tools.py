@@ -30,6 +30,7 @@ from field_notes_schema import (
     CellUpdate,
     DeepBlock,
     MetricItem,
+    PatchVisualSandboxRequest,
     ProjectCreate,
     ProjectUpdate,
     ReorderRequest,
@@ -54,6 +55,7 @@ TOOL_NAMES: list[str] = [
     "get_cell",
     "create_cell",
     "update_cell",
+    "patch_visual_sandbox",
     "reorder_cell",
     "delete_cell",
     "set_filter",
@@ -84,10 +86,6 @@ class CreateProjectInput(BaseModel):
 
 
 class UpdateProjectInput(BaseModel):
-    # op is a no-op required marker. Without a second non-nullable required field,
-    # Opus 4.7 reliably emits `input: {}` for this tool (see git history for the
-    # debug trace). Adding it sidesteps that model misbehavior.
-    op: Literal["patch"]
     project_id: UUID
     name: str | None = None
     subtitle: str | None = None
@@ -125,8 +123,6 @@ class UpdateCellInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # See UpdateProjectInput.op for rationale.
-    op: Literal["patch"]
     cell_id: UUID
     title: str | None = None
     agent_id: str | None = None
@@ -137,6 +133,14 @@ class UpdateCellInput(BaseModel):
     video: VideoSlot | None = None
     deep: DeepBlock | None = None
     body: str | None = None
+
+
+class PatchVisualSandboxInput(BaseModel):
+    cell_id: UUID
+    target: Literal["html", "js", "css"]
+    find: str = Field(min_length=1)
+    replace: str
+    expected_count: int = Field(default=1, ge=1)
 
 
 class ReorderCellInput(BaseModel):
@@ -200,7 +204,6 @@ async def t_create_project(client: FieldNotesClient, params: CreateProjectInput)
 async def t_update_project(client: FieldNotesClient, params: UpdateProjectInput) -> dict[str, Any]:
     payload = params.model_dump(exclude_unset=True)
     payload.pop("project_id", None)
-    payload.pop("op", None)
     p = await client.update_project(params.project_id, ProjectUpdate(**payload))
     return p.model_dump(mode="json")
 
@@ -237,9 +240,22 @@ async def t_create_cell(client: FieldNotesClient, params: CreateCellInput) -> di
 async def t_update_cell(client: FieldNotesClient, params: UpdateCellInput) -> dict[str, Any]:
     payload = params.model_dump(exclude_unset=True)
     payload.pop("cell_id", None)
-    payload.pop("op", None)
     try:
         c = await client.update_cell(params.cell_id, CellUpdate(**payload))
+    except LockedCellError as err:
+        return _locked_cell_error(err)
+    return c.model_dump(mode="json")
+
+
+async def t_patch_visual_sandbox(client: FieldNotesClient, params: PatchVisualSandboxInput) -> dict[str, Any]:
+    body = PatchVisualSandboxRequest(
+        target=params.target,
+        find=params.find,
+        replace=params.replace,
+        expected_count=params.expected_count,
+    )
+    try:
+        c = await client.patch_visual_sandbox(params.cell_id, body)
     except LockedCellError as err:
         return _locked_cell_error(err)
     return c.model_dump(mode="json")
@@ -332,16 +348,15 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
             CreateProjectInput(name=name, subtitle=subtitle, repo=repo),
         )
 
-    @mcp.tool(description="Update a project's metadata (name/subtitle/repo). Pass op='patch'.")
+    @mcp.tool(description="Update a project's metadata (name/subtitle/repo).")
     async def update_project(
-        op: Literal["patch"],
         project_id: UUID,
         name: str | None = None,
         subtitle: str | None = None,
         repo: str | None = None,
     ) -> dict[str, Any]:
         # Build a real validated instance, preserving "set"-ness so we PATCH only what was passed.
-        fields: dict[str, Any] = {"op": op, "project_id": project_id}
+        fields: dict[str, Any] = {"project_id": project_id}
         if name is not None:
             fields["name"] = name
         if subtitle is not None:
@@ -410,12 +425,15 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
 
     @mcp.tool(
         description=(
-            "Update a cell's writable fields. Pass op='patch'. Verdict and locked are NOT writable here — "
-            "those are the human's authority. Returns {error: 'locked_cell', ...} if the cell is locked."
+            "Update a cell's writable fields. Send ONLY the fields you want to change. "
+            "If you want a small tweak inside an existing visual.sandbox (e.g. delete a "
+            "<p class='hint'> block), use patch_visual_sandbox INSTEAD — sending the whole "
+            "sandbox here can exceed tool-call channel limits and silently arrive as {}. "
+            "Verdict and locked are NOT writable here — those are the human's authority. "
+            "Returns {error: 'locked_cell', ...} if the cell is locked."
         )
     )
     async def update_cell(
-        op: Literal["patch"],
         cell_id: UUID,
         title: str | None = None,
         agent_id: str | None = None,
@@ -427,7 +445,7 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
         deep: DeepBlock | None = None,
         body: str | None = None,
     ) -> dict[str, Any]:
-        fields: dict[str, Any] = {"op": op, "cell_id": cell_id}
+        fields: dict[str, Any] = {"cell_id": cell_id}
         for k, v in {
             "title": title,
             "agent_id": agent_id,
@@ -442,6 +460,34 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
             if v is not None:
                 fields[k] = v
         return await t_update_cell(get_client(), UpdateCellInput(**fields))
+
+    @mcp.tool(
+        description=(
+            "Surgically edit a substring inside a cell's visual.sandbox.{html,js,css}. "
+            "Use this INSTEAD of update_cell when the cell already has a large sandbox and "
+            "you only want to change a small piece — sending the whole sandbox via update_cell "
+            "can exceed tool-call channel limits and silently arrive empty. "
+            "`find` must occur exactly `expected_count` times in target (default 1); mismatch is rejected. "
+            "Returns {error: 'locked_cell', ...} if the cell is locked."
+        )
+    )
+    async def patch_visual_sandbox(
+        cell_id: UUID,
+        target: Literal["html", "js", "css"],
+        find: str,
+        replace: str,
+        expected_count: int = 1,
+    ) -> dict[str, Any]:
+        return await t_patch_visual_sandbox(
+            get_client(),
+            PatchVisualSandboxInput(
+                cell_id=cell_id,
+                target=target,
+                find=find,
+                replace=replace,
+                expected_count=expected_count,
+            ),
+        )
 
     @mcp.tool(
         description=("Reorder a cell. Provide exactly one of `direction` ('up'|'down') or `position` (0-indexed).")

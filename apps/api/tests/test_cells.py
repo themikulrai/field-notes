@@ -138,3 +138,87 @@ async def test_reorder_validation_error(client, project_id) -> None:
     assert r.status_code == 422
     r = await client.post(f"/cells/{a['id']}/reorder", json={"direction": "up", "position": 0})
     assert r.status_code == 422
+
+
+async def _create_sandbox(client, pid: str, html="<div>old</div><p class='hint'>x</p>", js="", css="") -> dict:
+    return await _create_cell(
+        client,
+        pid,
+        title="S",
+        visual={"kind": "sandbox", "html": html, "js": js, "css": css},
+    )
+
+
+async def test_patch_sandbox_html_basic(client, project_id) -> None:
+    c = await _create_sandbox(client, project_id)
+    r = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/patch",
+        json={"target": "html", "find": "<p class='hint'>x</p>", "replace": ""},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["visual"]["html"] == "<div>old</div>"
+
+
+async def test_patch_sandbox_rejects_count_mismatch(client, project_id) -> None:
+    c = await _create_sandbox(client, project_id, html="aa-bb-aa")
+    # `aa` appears twice, default expected_count=1 → 422
+    r = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/patch",
+        json={"target": "html", "find": "aa", "replace": "Z"},
+    )
+    assert r.status_code == 422
+    assert "2 time" in r.json()["detail"]
+
+
+async def test_patch_sandbox_explicit_count_replaces_all(client, project_id) -> None:
+    c = await _create_sandbox(client, project_id, html="aa-bb-aa")
+    r = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/patch",
+        json={"target": "html", "find": "aa", "replace": "Z", "expected_count": 2},
+    )
+    assert r.status_code == 200
+    assert r.json()["visual"]["html"] == "Z-bb-Z"
+
+
+async def test_patch_sandbox_rejects_missing_find(client, project_id) -> None:
+    c = await _create_sandbox(client, project_id)
+    r = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/patch",
+        json={"target": "html", "find": "not-there", "replace": "Z"},
+    )
+    assert r.status_code == 422
+    assert "0 time" in r.json()["detail"]
+
+
+async def test_patch_sandbox_404_on_unknown_cell(client) -> None:
+    import uuid as _u
+    r = await client.post(
+        f"/cells/{_u.uuid4()}/visual-sandbox/patch",
+        json={"target": "html", "find": "x", "replace": "y"},
+    )
+    assert r.status_code == 404
+
+
+async def test_patch_sandbox_422_on_non_sandbox_visual(client, project_id) -> None:
+    c = await _create_cell(
+        client, project_id, title="S",
+        visual={"kind": "svg", "source": "<svg/>"},
+    )
+    r = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/patch",
+        json={"target": "html", "find": "x", "replace": "y"},
+    )
+    assert r.status_code == 422
+    assert "no visual.sandbox" in r.json()["detail"]
+
+
+async def test_patch_sandbox_locked_returns_409(client, project_id) -> None:
+    c = await _create_sandbox(client, project_id)
+    await client.post(f"/cells/{c['id']}/verdict", json={"state": "accept"})
+    lr = await client.post(f"/cells/{c['id']}/lock")
+    assert lr.status_code == 200, lr.text
+    r = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/patch",
+        json={"target": "html", "find": "<div>old</div>", "replace": "<div>new</div>"},
+    )
+    assert r.status_code == 409

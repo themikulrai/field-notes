@@ -23,6 +23,7 @@ from field_notes_schema import (
     CellRead,
     CellStatus,
     CellUpdate,
+    PatchVisualSandboxRequest,
     ReorderRequest,
 )
 from sqlalchemy import select
@@ -193,6 +194,56 @@ async def update_cell(
         project_id=c.project_id,
         cell_id=c.id,
         payload={"fields": list(data.keys())},
+        source=_source(request),
+    )
+    await session.commit()
+    schedule_publish(env)
+    fresh = await load_cell_full(session, cid)
+    assert fresh is not None
+    return cell_to_read(fresh, fresh.verdict)
+
+
+@router.post("/cells/{cid}/visual-sandbox/patch", response_model=CellRead)
+async def patch_visual_sandbox(
+    cid: uuid.UUID,
+    body: PatchVisualSandboxRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> CellRead:
+    """Substring-replace inside a cell's visual.sandbox.{html,js,css}.
+
+    Exists so agents don't have to retransmit the entire sandbox to do a small
+    edit — the MCP tool-call channel silently truncates large inputs to `{}`.
+    """
+    c = await session.get(Cell, cid)
+    if c is None:
+        raise HTTPException(status_code=404, detail="cell not found")
+    if c.locked:
+        raise HTTPException(status_code=409, detail="cell is locked")
+    if not isinstance(c.visual, dict) or c.visual.get("kind") != "sandbox":
+        raise HTTPException(status_code=422, detail="cell has no visual.sandbox")
+    current = c.visual.get(body.target, "")
+    if not isinstance(current, str):
+        raise HTTPException(status_code=422, detail=f"visual.sandbox.{body.target} is not a string")
+    actual = current.count(body.find)
+    if actual != body.expected_count:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"`find` appears {actual} time(s) in visual.sandbox.{body.target}, "
+                f"expected_count={body.expected_count}"
+            ),
+        )
+    new_visual = dict(c.visual)
+    new_visual[body.target] = current.replace(body.find, body.replace)
+    c.visual = new_visual
+    await session.flush()
+    env = await emit_event(
+        session,
+        "cell.updated",
+        project_id=c.project_id,
+        cell_id=c.id,
+        payload={"fields": ["visual"], "patch": {"target": body.target, "count": actual}},
         source=_source(request),
     )
     await session.commit()

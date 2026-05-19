@@ -95,7 +95,7 @@ async def test_t_update_project_only_set_fields() -> None:
         return httpx.Response(200, json=_proj(pid, name="renamed"))
 
     async with _make_client(handler) as c:
-        await T.t_update_project(c, T.UpdateProjectInput(op="patch", project_id=pid, name="renamed"))
+        await T.t_update_project(c, T.UpdateProjectInput(project_id=pid, name="renamed"))
     assert seen_body == {"name": "renamed"}
 
 
@@ -135,7 +135,7 @@ async def test_t_update_cell_locked_returns_structured_error() -> None:
         return httpx.Response(409, json={"detail": "cell is locked"})
 
     async with _make_client(handler) as c:
-        out = await T.t_update_cell(c, T.UpdateCellInput(op="patch", cell_id=cid, title="x"))
+        out = await T.t_update_cell(c, T.UpdateCellInput(cell_id=cid, title="x"))
     assert out["error"] == "locked_cell"
     assert out["cell_id"] == str(cid)
     assert "locked" in out["message"].lower()
@@ -161,6 +161,44 @@ async def test_t_reorder_cell_locked_returns_structured_error() -> None:
     async with _make_client(handler) as c:
         out = await T.t_reorder_cell(c, T.ReorderCellInput(cell_id=cid, direction="up"))
     assert out["error"] == "locked_cell"
+
+
+async def test_t_patch_visual_sandbox_forwards_body() -> None:
+    pid = uuid.uuid4()
+    cid = uuid.uuid4()
+    seen: dict[str, Any] = {}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen["path"] = req.url.path
+        seen["body"] = json.loads(req.content)
+        return httpx.Response(
+            200,
+            json=_cell(cid, pid, visual={"kind": "sandbox", "html": "Z", "js": "", "css": ""}),
+        )
+
+    async with _make_client(handler) as c:
+        out = await T.t_patch_visual_sandbox(
+            c,
+            T.PatchVisualSandboxInput(cell_id=cid, target="html", find="<old>", replace="<new>"),
+        )
+    assert seen["path"].endswith(f"/cells/{cid}/visual-sandbox/patch")
+    assert seen["body"] == {"target": "html", "find": "<old>", "replace": "<new>", "expected_count": 1}
+    assert out["id"] == str(cid)
+
+
+async def test_t_patch_visual_sandbox_locked_returns_structured_error() -> None:
+    cid = uuid.uuid4()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        return httpx.Response(409, json={"detail": "cell is locked"})
+
+    async with _make_client(handler) as c:
+        out = await T.t_patch_visual_sandbox(
+            c,
+            T.PatchVisualSandboxInput(cell_id=cid, target="html", find="x", replace="y"),
+        )
+    assert out["error"] == "locked_cell"
+    assert out["cell_id"] == str(cid)
 
 
 async def test_t_get_feedback_filters_out_no_verdict() -> None:

@@ -191,6 +191,16 @@ class ReorderRequest(BaseModel):
         return self
 
 
+class PatchVisualSandboxRequest(BaseModel):
+    target: Literal["html", "js", "css"]
+    find: str = Field(min_length=1)
+    replace: str
+    # Pre-check that `find` appears exactly this many times. Defaults to 1 so the
+    # agent must consciously opt-in to multi-replace by setting expected_count
+    # (or the value it just saw in get_cell). Mismatch → 422 with actual count.
+    expected_count: int = Field(default=1, ge=1)
+
+
 class EventEnvelope(BaseModel):
     id: UUID
     at: datetime
@@ -209,6 +219,7 @@ __all__ = [
     "DeepBlock",
     "EventEnvelope",
     "MetricItem",
+    "PatchVisualSandboxRequest",
     "ProjectCounts",
     "ProjectCreate",
     "ProjectRead",

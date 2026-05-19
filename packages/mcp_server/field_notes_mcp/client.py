@@ -20,6 +20,7 @@ from field_notes_schema import (
     CellRead,
     CellUpdate,
     EventEnvelope,
+    PatchVisualSandboxRequest,
     ProjectCreate,
     ProjectRead,
     ProjectUpdate,
@@ -152,6 +153,14 @@ class FieldNotesClient:
         )
         # 409 here means the cell is locked — propagate as a typed error so the
         # tool layer can convert it to a structured MCP error.
+        self._raise_for(r, cell_id=cid)
+        return CellRead.model_validate(r.json())
+
+    async def patch_visual_sandbox(self, cid: uuid.UUID, body: PatchVisualSandboxRequest) -> CellRead:
+        r = await self._http.post(
+            f"/cells/{cid}/visual-sandbox/patch",
+            json=body.model_dump(mode="json"),
+        )
         self._raise_for(r, cell_id=cid)
         return CellRead.model_validate(r.json())
 
