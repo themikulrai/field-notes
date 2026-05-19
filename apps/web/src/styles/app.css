@@ -21,7 +21,7 @@
     --c-red-bg:     oklch(0.93 0.04 28);
 
     --sans: "IBM Plex Sans", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --mono: "Roboto Mono", ui-monospace, "SF Mono", Menlo, monospace;
     --serif: "Newsreader", Georgia, serif;
 
     --top-h: 230px;
