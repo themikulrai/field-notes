@@ -1,15 +1,15 @@
   :root {
-    /* Linen theme: warm cream chrome, pure-white cells, subtle off-white inner panels */
-    --paper:        #f5f1e8;
-    --paper-2:      #efeadc;
-    --paper-3:      #e9e2cf;
-    --paper-4:      #ddd2b8;
-    --ink:          #1c1814;
-    --ink-2:        #4a443b;
-    --ink-3:        #7a7368;
-    --ink-4:        #b1a999;
-    --rule:         #d6cdb7;
-    --rule-2:       #c2b89e;
+    /* Paper theme: plain white chrome, neutral grays for ink and rules */
+    --paper:        #ffffff;
+    --paper-2:      #ffffff;
+    --paper-3:      #f4f4f4;
+    --paper-4:      #e8e8e8;
+    --ink:          #000000;
+    --ink-2:        #333333;
+    --ink-3:        #666666;
+    --ink-4:        #999999;
+    --rule:         #e0e0e0;
+    --rule-2:       #c8c8c8;
 
     --c-amber:      oklch(0.66 0.16 70);
     --c-amber-bg:   oklch(0.93 0.05 80);
@@ -247,13 +247,13 @@
     padding: 22px 26px 22px 38px;
     box-shadow: 0 1px 0 rgba(28,24,20,0.02), 0 12px 28px -22px rgba(28,24,20,0.18);
   }
-  /* Inner panels inside the white cell get a very subtle warm off-white so they
-     still read as panels rather than disappearing into the cell. */
+  /* Inner panels inside the white cell get a very subtle neutral off-white so
+     they still read as panels rather than disappearing into the cell. */
   .cell .metrics,
   .cell .chart-wrap,
   .cell .video-slot,
   .cell .logs {
-    background: #faf7f0;
+    background: #fafafa;
   }
   .rail {
     position: absolute; top: -1px; left: -1px; bottom: -1px;
