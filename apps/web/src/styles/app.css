@@ -20,7 +20,7 @@
     --c-red:        oklch(0.52 0.17 28);
     --c-red-bg:     oklch(0.93 0.04 28);
 
-    --sans: "IBM Plex Sans", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --sans: "Google Sans", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
     --mono: "Roboto Mono", ui-monospace, "SF Mono", Menlo, monospace;
     --serif: "Newsreader", Georgia, serif;
 
@@ -192,7 +192,7 @@
   .top-stats { display: flex; gap: 22px; align-items: center; }
   .stat { display: flex; align-items: baseline; gap: 6px; }
   .stat-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; transform: translateY(-1px); margin-right: 2px; }
-  .stat-num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 18px; }
+  .stat-num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 19px; }
   .stat-num.small { font-size: 13px; color: var(--ink-2); }
   .stat-lbl { font-size: 11px; color: var(--ink-2); }
 
@@ -203,7 +203,7 @@
     appearance: none; background: transparent;
     border: 1px solid var(--rule-2);
     color: var(--ink-2);
-    font-family: var(--mono); font-size: 12px;
+    font-family: var(--mono); font-size: 13px;
     padding: 6px 10px 6px 9px;
     display: inline-flex; align-items: center; gap: 7px;
     cursor: pointer; border-radius: 20px;
@@ -222,7 +222,7 @@
   .ghost-btn {
     appearance: none; background: transparent;
     border: 1px dashed var(--rule-2);
-    color: var(--ink-2); font-size: 12px; font-family: var(--mono);
+    color: var(--ink-2); font-size: 13px; font-family: var(--mono);
     padding: 6px 12px;
     display: inline-flex; align-items: center; gap: 6px;
     cursor: pointer; border-radius: 8px;
@@ -284,7 +284,7 @@
 
   .status-badge {
     display: inline-flex; align-items: center; gap: 6px;
-    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    font-family: var(--mono); font-size: 12px; font-weight: 500;
     padding: 3px 8px 3px 7px;
     background: var(--bg); color: var(--c);
     border: 1px solid color-mix(in oklch, var(--c) 28%, transparent);
@@ -324,20 +324,20 @@
   .metric { padding: 10px 14px; border-right: 1px solid var(--rule); }
   .metric:last-child { border-right: none; }
   .metric-k {
-    font-family: var(--mono); font-size: 10px;
+    font-family: var(--mono); font-size: 11px;
     letter-spacing: 0.04em; text-transform: uppercase;
     color: var(--ink-3); margin-bottom: 4px;
   }
   .metric-v {
-    font-family: var(--mono); font-size: 18px; font-weight: 500;
+    font-family: var(--mono); font-size: 19px; font-weight: 500;
     color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1;
   }
-  .metric-d { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 3px; }
+  .metric-d { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
 
   .chart-wrap { border: 1px solid var(--rule); background: var(--paper); padding: 14px 16px 8px; border-radius: 8px; }
   .chart { display: block; width: 100%; height: auto; }
-  .chart-tick { font-family: var(--mono); font-size: 8.5px; fill: var(--ink-3); }
-  .chart-cap  { font-family: var(--mono); font-size: 9px;   fill: var(--ink-3); }
+  .chart-tick { font-family: var(--mono); font-size: 9.5px; fill: var(--ink-3); }
+  .chart-cap  { font-family: var(--mono); font-size: 10px;   fill: var(--ink-3); }
 
   .video-slot {
     position: relative; border: 1px solid var(--rule);
@@ -374,13 +374,13 @@
   }
   .verdict-tag-label {
     font-family: var(--mono);
-    font-size: 9.5px; letter-spacing: 0.18em;
+    font-size: 10.5px; letter-spacing: 0.18em;
     color: var(--ink); font-weight: 600;
     border: 1px solid var(--ink-3);
     padding: 2px 6px; border-radius: 6px;
     background: var(--paper-2);
   }
-  .verdict-tag-time { font-size: 10px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: none; font-family: var(--mono); }
+  .verdict-tag-time { font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; text-transform: none; font-family: var(--mono); }
   .verdict--accept .verdict-tag-label { border-color: var(--c-green); color: var(--c-green); background: color-mix(in oklch, var(--c-green) 12%, var(--paper-2)); }
   .verdict--reject .verdict-tag-label { border-color: var(--c-red);   color: var(--c-red);   background: color-mix(in oklch, var(--c-red)   12%, var(--paper-2)); }
 
@@ -402,7 +402,7 @@
   .vbtn {
     appearance: none; background: var(--paper-4);
     border: 1px solid var(--rule-2); color: var(--ink);
-    font-family: var(--mono); font-size: 12px;
+    font-family: var(--mono); font-size: 13px;
     padding: 7px 14px 7px 11px;
     display: inline-flex; align-items: center; gap: 7px;
     cursor: pointer; border-radius: 8px;
@@ -437,7 +437,7 @@
   }
   .deep-toggle-line { height: 1px; background: var(--rule); }
   .deep-toggle-label {
-    font-family: var(--mono); font-size: 10.5px; color: var(--ink-3);
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-3);
     letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 6px;
   }
   .deep-toggle:hover .deep-toggle-label { color: var(--ink); }
@@ -452,12 +452,12 @@
 
   .deep-grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 22px; }
   .deep-h {
-    font-family: var(--mono); font-size: 10.5px;
+    font-family: var(--mono); font-size: 11.5px;
     text-transform: uppercase; letter-spacing: 0.12em;
     color: var(--ink-3); margin: 0 0 8px; font-weight: 500;
     display: flex; justify-content: space-between; align-items: center;
   }
-  .kv { margin: 0; display: grid; gap: 0; font-family: var(--mono); font-size: 12px; }
+  .kv { margin: 0; display: grid; gap: 0; font-family: var(--mono); font-size: 13px; }
   .kv-row {
     display: grid; grid-template-columns: 110px 1fr;
     padding: 4px 0; border-bottom: 1px dotted var(--rule-2);
@@ -477,7 +477,7 @@
 
   .link-btn {
     appearance: none; background: transparent; border: none;
-    color: var(--ink); font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink); font-family: var(--mono); font-size: 11.5px;
     cursor: pointer; padding: 0;
     text-decoration: underline; text-underline-offset: 2px;
     text-decoration-color: var(--rule-2);
@@ -487,7 +487,7 @@
   .logs {
     background: var(--paper); border: 1px solid var(--rule);
     border-radius: 6px;
-    padding: 10px 14px; font-size: 11.5px; line-height: 1.6;
+    padding: 10px 14px; font-size: 12.5px; line-height: 1.6;
     color: var(--ink-2); margin: 0; overflow-x: auto; white-space: pre;
     font-family: var(--mono);
   }
@@ -578,7 +578,7 @@
     padding-bottom: 8px;
   }
   .toc-title {
-    font-size: 9.5px;
+    font-size: 10.5px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -586,7 +586,7 @@
     font-weight: 500;
   }
   .toc-count {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--ink-4);
     font-variant-numeric: tabular-nums;
   }
@@ -596,7 +596,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.4;
     color: var(--ink-2);
     padding: 5px 6px 5px 8px;
@@ -608,13 +608,13 @@
   .toc-item.is-current { background: transparent; color: var(--ink); }
   .toc-item.is-current .toc-label { font-weight: 700; }
   .toc-item--1 { font-weight: 600; color: var(--ink-2); }
-  .toc-item--2 { padding-left: 22px; font-size: 11.5px; }
-  .toc-item--3 { padding-left: 36px; font-size: 11px; color: var(--ink-3); }
-  .toc-item--4 { padding-left: 50px; font-size: 10.5px; color: var(--ink-3); }
+  .toc-item--2 { padding-left: 22px; font-size: 12.5px; }
+  .toc-item--3 { padding-left: 36px; font-size: 12px; color: var(--ink-3); }
+  .toc-item--4 { padding-left: 50px; font-size: 11.5px; color: var(--ink-3); }
   .toc-tier {
     width: 18px;
     flex-shrink: 0;
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.08em;
     color: var(--ink-3);
     font-variant-numeric: tabular-nums;
@@ -629,7 +629,7 @@
     font-weight: 600;
   }
   .toc-pill {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--ink-3);
     font-variant-numeric: tabular-nums;
     padding: 0;
@@ -638,7 +638,7 @@
     font-weight: 500;
   }
   .toc-empty {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--ink-4);
     padding: 4px 6px;
     font-style: italic;
@@ -657,7 +657,7 @@
     display: inline-flex; align-items: center; gap: 4px;
     cursor: pointer;
     border-radius: 8px;
-    font-family: var(--mono); font-size: 10.5px;
+    font-family: var(--mono); font-size: 11.5px;
     font-variant-numeric: tabular-nums;
     transition: color 140ms, border-color 140ms, background 140ms;
   }
@@ -772,7 +772,7 @@
   .md-rendered code {
     font-family: var(--mono);
     font-style: normal;
-    font-size: 13px;
+    font-size: 14px;
     background: var(--paper-3);
     border: 1px solid var(--rule);
     padding: 0.5px 5px;
@@ -811,7 +811,7 @@
     border: 1px solid var(--c-blue);
     color: var(--ink);
     font-family: var(--mono);
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.55;
     padding: 12px 14px;
     border-radius: 10px;
@@ -829,7 +829,7 @@
   }
   .md-editor-hint kbd {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     background: var(--paper-2);
     border: 1px solid var(--rule-2);
     border-bottom-width: 2px;
@@ -897,7 +897,7 @@
     border: none;
     color: var(--ink-2);
     font-family: var(--mono);
-    font-size: 11.5px;
+    font-size: 12.5px;
     padding: 8px 14px;
     cursor: pointer;
     display: inline-flex;
@@ -911,7 +911,7 @@
     margin-top: 40px; padding-top: 16px;
     border-top: 1px solid var(--rule);
     display: flex; justify-content: space-between;
-    font-size: 11px; color: var(--ink-3);
+    font-size: 12px; color: var(--ink-3);
     font-family: var(--mono);
   }
 
@@ -942,7 +942,7 @@
   align-items: center;
   gap: 4px;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -960,7 +960,7 @@
 
 .unlock-btn {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   background: transparent;
   color: var(--c-gold);
   border: 1px solid var(--c-gold);
@@ -1023,7 +1023,7 @@
   border: 1px solid var(--rule);
   padding: 8px 10px;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 14px;
   border-radius: 6px;
 }
 .key-gate-card button {
@@ -1034,7 +1034,7 @@
   border: 1px solid var(--c-blue);
   padding: 8px 12px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   border-radius: 6px;
   cursor: pointer;
 }
@@ -1054,7 +1054,7 @@
   border: 1px solid var(--c-blue);
   padding: 8px 14px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   border-radius: 6px;
   cursor: pointer;
 }
