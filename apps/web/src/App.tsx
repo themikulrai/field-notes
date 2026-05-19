@@ -188,7 +188,6 @@ function Main() {
         <ProjectTabStrip
           projects={projects}
           activeId={activeId}
-          cellsByProject={cellsByProject}
           onSelect={(pid) => setActiveProject(pid)}
           onClose={(pid) => void deleteProject(pid)}
           onAdd={() => {

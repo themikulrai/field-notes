@@ -57,6 +57,13 @@ export interface DeepBlock {
   logs: string;
 }
 
+export interface ProjectCounts {
+  in_progress: number;
+  open: number;
+  verified: number;
+  rejected: number;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -65,6 +72,7 @@ export interface Project {
   created_at: string;
   updated_at: string;
   ui_filter?: "all" | CellStatus | null;
+  counts?: ProjectCounts;
 }
 
 export interface Cell {

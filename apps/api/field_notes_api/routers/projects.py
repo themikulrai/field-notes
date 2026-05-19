@@ -12,7 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import require_api_key
 from ..db import get_session
 from ..models import Project
-from ..services import emit_event, project_to_read, schedule_publish
+from ..services import (
+    emit_event,
+    project_counts_for,
+    project_counts_map,
+    project_to_read,
+    schedule_publish,
+)
 
 router = APIRouter(prefix="/projects", tags=["projects"], dependencies=[Depends(require_api_key)])
 
@@ -24,7 +30,9 @@ def _source(request: Request) -> str:
 @router.get("", response_model=list[ProjectRead])
 async def list_projects(session: AsyncSession = Depends(get_session)) -> list[ProjectRead]:
     result = await session.execute(select(Project).order_by(Project.created_at))
-    return [project_to_read(p) for p in result.scalars().all()]
+    projects = list(result.scalars().all())
+    counts = await project_counts_map(session, [p.id for p in projects])
+    return [project_to_read(p, counts.get(p.id)) for p in projects]
 
 
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
@@ -46,7 +54,7 @@ async def create_project(
     await session.commit()
     await session.refresh(p)
     schedule_publish(env)
-    return project_to_read(p)
+    return project_to_read(p, await project_counts_for(session, p.id))
 
 
 @router.get("/{pid}", response_model=ProjectRead)
@@ -54,7 +62,7 @@ async def get_project(pid: uuid.UUID, session: AsyncSession = Depends(get_sessio
     p = await session.get(Project, pid)
     if p is None:
         raise HTTPException(status_code=404, detail="project not found")
-    return project_to_read(p)
+    return project_to_read(p, await project_counts_for(session, p.id))
 
 
 @router.patch("/{pid}", response_model=ProjectRead)
@@ -81,7 +89,7 @@ async def update_project(
     await session.commit()
     await session.refresh(p)
     schedule_publish(env)
-    return project_to_read(p)
+    return project_to_read(p, await project_counts_for(session, p.id))
 
 
 @router.delete("/{pid}", status_code=status.HTTP_204_NO_CONTENT)
@@ -139,4 +147,4 @@ async def set_ui_filter(
     await session.commit()
     await session.refresh(p)
     schedule_publish(env)
-    return project_to_read(p)
+    return project_to_read(p, await project_counts_for(session, p.id))

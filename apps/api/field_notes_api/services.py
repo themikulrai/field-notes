@@ -11,11 +11,12 @@ from typing import Any
 from field_notes_schema import (
     CellRead,
     EventEnvelope,
+    ProjectCounts,
     ProjectRead,
     Verdict,
     VerdictState,
 )
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -84,7 +85,7 @@ async def load_project_full(session: AsyncSession, pid: uuid.UUID) -> Project | 
     return result.scalars().first()
 
 
-def project_to_read(p: Project) -> ProjectRead:
+def project_to_read(p: Project, counts: ProjectCounts | None = None) -> ProjectRead:
     return ProjectRead(
         id=p.id,
         name=p.name,
@@ -93,7 +94,40 @@ def project_to_read(p: Project) -> ProjectRead:
         created_at=p.created_at,
         updated_at=p.updated_at,
         ui_filter=p.ui_filter,
+        counts=counts or ProjectCounts(),
     )
+
+
+async def project_counts_map(
+    session: AsyncSession, project_ids: list[uuid.UUID] | None = None
+) -> dict[uuid.UUID, ProjectCounts]:
+    """Aggregate agent-cell counts grouped by (project_id, status).
+
+    Returns a mapping pid -> ProjectCounts. Projects with no agent cells
+    are absent from the map; callers should treat absence as zero counts.
+    Cells with kind != 'agent' or status = NULL are excluded.
+    """
+    stmt = (
+        select(Cell.project_id, Cell.status, func.count())
+        .where(Cell.kind == "agent")
+        .where(Cell.status.is_not(None))
+        .group_by(Cell.project_id, Cell.status)
+    )
+    if project_ids is not None:
+        if not project_ids:
+            return {}
+        stmt = stmt.where(Cell.project_id.in_(project_ids))
+    out: dict[uuid.UUID, ProjectCounts] = {}
+    for pid, status, n in (await session.execute(stmt)).all():
+        bucket = out.setdefault(pid, ProjectCounts())
+        if status in ("in_progress", "open", "verified", "rejected"):
+            setattr(bucket, status, n)
+    return out
+
+
+async def project_counts_for(session: AsyncSession, pid: uuid.UUID) -> ProjectCounts:
+    m = await project_counts_map(session, [pid])
+    return m.get(pid, ProjectCounts())
 
 
 def cell_to_read(c: Cell, v: VerdictRow | None = None) -> CellRead:

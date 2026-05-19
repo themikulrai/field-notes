@@ -1,46 +1,37 @@
-import type { Cell, CellStatus, Project } from "../lib/types";
+import type { Project, ProjectCounts } from "../lib/types";
 
 interface StripProps {
   projects: Project[];
   activeId: string | null;
-  cellsByProject: Record<string, Cell[]>;
   onSelect: (pid: string) => void;
   onClose: (pid: string) => void;
   onAdd: () => void;
 }
 
-function projectCounts(cells: Cell[]): Record<"all" | CellStatus, number> {
-  const c = { all: 0, in_progress: 0, open: 0, verified: 0, rejected: 0 };
-  for (const x of cells) {
-    if (x.kind !== "agent") continue;
-    c.all++;
-    if (x.status) c[x.status]++;
-  }
-  return c;
-}
+const ZERO_COUNTS: ProjectCounts = { in_progress: 0, open: 0, verified: 0, rejected: 0 };
 
 function ProjectTab({
   project,
   active,
-  cells,
   canClose,
   onClick,
   onClose,
 }: {
   project: Project;
   active: boolean;
-  cells: Cell[];
   canClose: boolean;
   onClick: () => void;
   onClose: () => void;
 }) {
-  const c = projectCounts(cells);
+  const c = project.counts ?? ZERO_COUNTS;
+  const tooltip = project.subtitle ? `${project.name} · ${project.subtitle}` : project.name;
   return (
     <div
       className={`ptab ${active ? "is-active" : ""}`}
       role="tab"
       aria-selected={active}
       tabIndex={0}
+      title={tooltip}
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -71,7 +62,6 @@ function ProjectTab({
               </span>
             )}
           </span>
-          {project.subtitle && <span className="ptab-sub mono dim">· {project.subtitle}</span>}
         </div>
       </div>
       {active && canClose && (
@@ -96,7 +86,6 @@ function ProjectTab({
 export function ProjectTabStrip({
   projects,
   activeId,
-  cellsByProject,
   onSelect,
   onClose,
   onAdd,
@@ -120,7 +109,6 @@ export function ProjectTabStrip({
             key={p.id}
             project={p}
             active={p.id === activeId}
-            cells={cellsByProject[p.id] || []}
             canClose={projects.length > 1}
             onClick={() => onSelect(p.id)}
             onClose={() => onClose(p.id)}

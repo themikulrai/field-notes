@@ -99,11 +99,19 @@ class ProjectCreate(BaseModel):
     repo: str | None = None
 
 
+class ProjectCounts(BaseModel):
+    in_progress: int = 0
+    open: int = 0
+    verified: int = 0
+    rejected: int = 0
+
+
 class ProjectRead(ProjectCreate):
     id: UUID
     created_at: datetime
     updated_at: datetime
     ui_filter: UiFilter | None = None
+    counts: ProjectCounts = Field(default_factory=ProjectCounts)
 
 
 class ProjectUpdate(BaseModel):
@@ -201,6 +209,7 @@ __all__ = [
     "DeepBlock",
     "EventEnvelope",
     "MetricItem",
+    "ProjectCounts",
     "ProjectCreate",
     "ProjectRead",
     "ProjectUpdate",

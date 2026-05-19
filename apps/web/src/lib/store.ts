@@ -87,6 +87,17 @@ interface StoreState {
   clearError: () => void;
 }
 
+// Silent refresh of projects (and their counts) without toggling `loading`.
+// Used by SSE handlers to keep inactive-tab pip counts up to date.
+function refreshProjectCounts(set: (partial: Partial<StoreState>) => void): void {
+  api
+    .listProjects()
+    .then((ps) => set({ projects: ps }))
+    .catch(() => {
+      /* ignore — next event will retry */
+    });
+}
+
 // Helper: find cell + project for a given cell id.
 function findCellLocation(
   cellsByProject: Record<string, Cell[]>,
@@ -350,6 +361,7 @@ export const useStore = create<StoreState>((set, get) => ({
     }
     if (env.kind === "cell.created" || env.kind === "cell.deleted") {
       await get().loadCells(pid);
+      refreshProjectCounts(set);
       return;
     }
     if (env.cell_id && (env.kind === "cell.updated" || env.kind.startsWith("verdict.") || env.kind.startsWith("cell."))) {
@@ -359,6 +371,7 @@ export const useStore = create<StoreState>((set, get) => ({
       } catch {
         await get().loadCells(pid);
       }
+      refreshProjectCounts(set);
     }
   },
 
