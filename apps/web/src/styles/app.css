@@ -20,10 +20,6 @@
     --c-red:        oklch(0.52 0.17 28);
     --c-red-bg:     oklch(0.93 0.04 28);
 
-    --bg-glow-1:    oklch(0.95 0.03 70 / 0.6);
-    --bg-glow-2:    oklch(0.94 0.03 100 / 0.5);
-    --bg-glow-3:    oklch(0.96 0.02 80 / 0.3);
-
     --sans: "IBM Plex Sans", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
     --serif: "Newsreader", Georgia, serif;
@@ -41,11 +37,6 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    background-image:
-      radial-gradient(at 90% -5%, var(--bg-glow-1), transparent 55%),
-      radial-gradient(at -5% 100%, var(--bg-glow-2), transparent 50%),
-      radial-gradient(at 50% 50%, var(--bg-glow-3), transparent 80%);
-    background-attachment: fixed;
     min-height: 100vh;
   }
   .mono { font-family: var(--mono); }
@@ -245,7 +236,7 @@
     border: 1px solid var(--rule);
     border-radius: 10px;
     padding: 22px 26px 22px 38px;
-    box-shadow: 0 1px 0 rgba(28,24,20,0.02), 0 12px 28px -22px rgba(28,24,20,0.18);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.02), 0 12px 28px -22px rgba(0,0,0,0.18);
   }
   /* Inner panels inside the white cell get a very subtle neutral off-white so
      they still read as panels rather than disappearing into the cell. */
