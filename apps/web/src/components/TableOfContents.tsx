@@ -1,9 +1,9 @@
 // Left-rail table of contents that mirrors the inferred section tree.
 //
-// Walks the section tree depth-first to build a flat list of H1/H2/H3 entries
-// with a count of descendant cells. Scroll-spy tracks which section's heading
-// has crossed the viewport's upper third; click-to-jump scrolls smoothly to
-// the section via its `data-section-id` anchor.
+// Walks the section tree depth-first to build a flat list of H1/H2/H3/H4
+// entries with a count of descendant cells. Scroll-spy tracks which section's
+// heading has crossed the viewport's upper third; click-to-jump scrolls
+// smoothly to the section via its `data-section-id` anchor.
 
 import { useEffect, useMemo, useState } from "react";
 import type { SectionNode, SectionLevel } from "../lib/sections";
@@ -93,7 +93,7 @@ export function TableOfContents({ sections }: Props) {
       </div>
       {items.length === 0 ? (
         <div className="toc-empty">
-          no sections yet · use <strong>#</strong>, <strong>##</strong>, <strong>###</strong> in notes
+          no sections yet · use <strong>#</strong>, <strong>##</strong>, <strong>###</strong>, <strong>####</strong> in notes
         </div>
       ) : (
         <ul className="toc-list">
