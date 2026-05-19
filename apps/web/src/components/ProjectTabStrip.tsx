@@ -56,7 +56,19 @@ function ProjectTab({
                 {c.open}
               </span>
             )}
-            {c.in_progress === 0 && c.open === 0 && (
+            {c.verified > 0 && (
+              <span className="ptab-pip" title={`${c.verified} verified`}>
+                <span className="pip-dot pip-green" />
+                {c.verified}
+              </span>
+            )}
+            {c.rejected > 0 && (
+              <span className="ptab-pip" title={`${c.rejected} rejected`}>
+                <span className="pip-dot pip-red" />
+                {c.rejected}
+              </span>
+            )}
+            {c.in_progress === 0 && c.open === 0 && c.verified === 0 && c.rejected === 0 && (
               <span className="ptab-pip dim">
                 <span className="pip-dot pip-rest" />0
               </span>

@@ -39,6 +39,43 @@ describe("ProjectTabStrip", () => {
     expect(restPips.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("renders verified and rejected pips when those counts are non-zero", () => {
+    const projects: Project[] = [
+      makeProject({ id: "a", name: "Alpha", counts: { in_progress: 0, open: 0, verified: 5, rejected: 1 } }),
+    ];
+    render(
+      <ProjectTabStrip
+        projects={projects}
+        activeId="a"
+        onSelect={() => {}}
+        onClose={() => {}}
+        onAdd={() => {}}
+      />,
+    );
+    expect(screen.getByTitle("5 verified")).toBeTruthy();
+    expect(screen.getByTitle("1 rejected")).toBeTruthy();
+    // Project is non-empty, so the dim rest pip must NOT be rendered.
+    expect(screen.queryByText("0")).toBeNull();
+  });
+
+  it("renders the dim rest pip only when all four counts are zero", () => {
+    const projects: Project[] = [
+      makeProject({ id: "a", name: "Empty", counts: { in_progress: 0, open: 0, verified: 0, rejected: 0 } }),
+    ];
+    render(
+      <ProjectTabStrip
+        projects={projects}
+        activeId="a"
+        onSelect={() => {}}
+        onClose={() => {}}
+        onAdd={() => {}}
+      />,
+    );
+    expect(screen.getByText("0")).toBeTruthy();
+    expect(screen.queryByTitle(/verified/)).toBeNull();
+    expect(screen.queryByTitle(/rejected/)).toBeNull();
+  });
+
   it("does not render the subtitle in the tab body", () => {
     const subtitle = "A long descriptive subtitle that should not appear inline in the tab strip";
     const projects: Project[] = [makeProject({ id: "a", name: "Alpha", subtitle })];

@@ -145,6 +145,8 @@
   .pip-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
   .pip-amber { background: var(--c-amber); }
   .pip-blue  { background: var(--c-blue); }
+  .pip-green { background: var(--c-green); }
+  .pip-red   { background: var(--c-red); }
   .pip-rest  { background: var(--ink-4); }
   .pip-dot.pulse {
     box-shadow: 0 0 0 0 color-mix(in oklch, var(--c-amber) 60%, transparent);
