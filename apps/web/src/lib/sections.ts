@@ -1,18 +1,19 @@
-// Walks a cell list and groups cells under markdown # / ## / ### headings.
+// Walks a cell list and groups cells under markdown # / ## / ### / #### headings.
 // Output is a tree of SectionNode for the renderer; collapse state survives
 // reorder because keys are derived from cell IDs.
 //
 // Levels follow the markdown heading depth:
-//   `# title`   -> level 1
-//   `## title`  -> level 2
-//   `### title` -> level 3
+//   `# title`    -> level 1
+//   `## title`   -> level 2
+//   `### title`  -> level 3
+//   `#### title` -> level 4
 // A heading at level N nests under the closest open heading of level < N, so
-// H3s tuck under their H2 which tucks under its H1. Headings shallower than or
-// equal to the current depth close the stack first.
+// H4s tuck under their H3 which tucks under their H2 which tucks under its H1.
+// Headings shallower than or equal to the current depth close the stack first.
 
 import type { Cell } from "./types";
 
-export type SectionLevel = 1 | 2 | 3;
+export type SectionLevel = 1 | 2 | 3 | 4;
 export type SectionNodeKind = "section" | "cell" | "markdown";
 
 export interface SectionNode {
@@ -31,6 +32,7 @@ function headingLevel(body: string | null | undefined): SectionLevel | null {
   for (const raw of lines) {
     const line = raw.trimStart();
     if (!line.trim()) continue;
+    if (line.startsWith("#### ")) return 4;
     if (line.startsWith("### ")) return 3;
     if (line.startsWith("## ")) return 2;
     if (line.startsWith("# ")) return 1;
@@ -44,6 +46,7 @@ function headingText(body: string): string {
   for (const raw of lines) {
     const line = raw.trimStart();
     if (!line.trim()) continue;
+    if (line.startsWith("#### ")) return line.slice(5).trim();
     if (line.startsWith("### ")) return line.slice(4).trim();
     if (line.startsWith("## ")) return line.slice(3).trim();
     if (line.startsWith("# ")) return line.slice(2).trim();

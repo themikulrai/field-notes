@@ -1,5 +1,5 @@
 // Tiny markdown renderer ported from the prototype (app.jsx 829–877).
-// Supports: # / ## / ### headings, **bold**, *italic*, `code`, [link](url),
+// Supports: # / ## / ### / #### headings, **bold**, *italic*, `code`, [link](url),
 // > blockquote, - / * lists, --- hr, paragraphs.
 
 function escapeHtml(s: string): string {
@@ -29,6 +29,11 @@ export function renderMarkdown(src: string | null | undefined): string {
       i++;
       continue;
     }
+    if (line.startsWith("#### ")) {
+      blocks.push(`<h4>${renderInline(line.slice(5))}</h4>`);
+      i++;
+      continue;
+    }
     if (line.startsWith("### ")) {
       blocks.push(`<h3>${renderInline(line.slice(4))}</h3>`);
       i++;
@@ -41,6 +46,16 @@ export function renderMarkdown(src: string | null | undefined): string {
     }
     if (line.startsWith("# ")) {
       blocks.push(`<h1>${renderInline(line.slice(2))}</h1>`);
+      i++;
+      continue;
+    }
+    // Defensive: any other `#`-prefixed line (e.g. `#####`, `#hashtag`,
+    // `##NoSpace`) is not a recognized heading. The paragraph block below
+    // refuses to consume `#`-prefixed lines, so without this guard `i` would
+    // never advance and renderMarkdown would loop forever, hanging the React
+    // render path and locking the browser.
+    if (line.startsWith("#")) {
+      blocks.push(`<p>${renderInline(line)}</p>`);
       i++;
       continue;
     }
