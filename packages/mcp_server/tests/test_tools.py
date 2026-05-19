@@ -95,7 +95,7 @@ async def test_t_update_project_only_set_fields() -> None:
         return httpx.Response(200, json=_proj(pid, name="renamed"))
 
     async with _make_client(handler) as c:
-        await T.t_update_project(c, T.UpdateProjectInput(project_id=pid, name="renamed"))
+        await T.t_update_project(c, T.UpdateProjectInput(project_id=pid, patch=T.ProjectPatch(name="renamed")))
     assert seen_body == {"name": "renamed"}
 
 
@@ -135,7 +135,7 @@ async def test_t_update_cell_locked_returns_structured_error() -> None:
         return httpx.Response(409, json={"detail": "cell is locked"})
 
     async with _make_client(handler) as c:
-        out = await T.t_update_cell(c, T.UpdateCellInput(cell_id=cid, title="x"))
+        out = await T.t_update_cell(c, T.UpdateCellInput(cell_id=cid, patch=T.CellPatch(title="x")))
     assert out["error"] == "locked_cell"
     assert out["cell_id"] == str(cid)
     assert "locked" in out["message"].lower()

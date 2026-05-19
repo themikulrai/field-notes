@@ -85,11 +85,22 @@ class CreateProjectInput(BaseModel):
     repo: str | None = None
 
 
-class UpdateProjectInput(BaseModel):
-    project_id: UUID
+class ProjectPatch(BaseModel):
+    """Writable fields on a project. All optional — send only what you want to change."""
+
+    model_config = ConfigDict(extra="forbid")
     name: str | None = None
     subtitle: str | None = None
     repo: str | None = None
+
+
+class UpdateProjectInput(BaseModel):
+    # Nested `patch` shape (vs flat optionals) so the tool schema has TWO required
+    # non-nullable fields. Opus 4.7 reliably emits input={} for tools whose schema
+    # is "1 required + N anyOf[T,null] default=null optionals" — the nested form
+    # forces the model to fill both fields and stops the empty-call failure mode.
+    project_id: UUID
+    patch: ProjectPatch
 
 
 class ListCellsInput(BaseModel):
@@ -118,12 +129,10 @@ class CreateCellInput(BaseModel):
     body: str | None = None
 
 
-class UpdateCellInput(BaseModel):
-    """Mirrors CellUpdate — verdict and locked are NOT here by design."""
+class CellPatch(BaseModel):
+    """Writable cell fields. All optional — send only what you want to change."""
 
     model_config = ConfigDict(extra="forbid")
-
-    cell_id: UUID
     title: str | None = None
     agent_id: str | None = None
     status: CellStatus | None = None
@@ -133,6 +142,17 @@ class UpdateCellInput(BaseModel):
     video: VideoSlot | None = None
     deep: DeepBlock | None = None
     body: str | None = None
+
+
+class UpdateCellInput(BaseModel):
+    """Mirrors CellUpdate — verdict and locked are NOT here by design.
+
+    See UpdateProjectInput for why `patch` is nested instead of flat.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    cell_id: UUID
+    patch: CellPatch
 
 
 class PatchVisualSandboxInput(BaseModel):
@@ -202,9 +222,8 @@ async def t_create_project(client: FieldNotesClient, params: CreateProjectInput)
 
 
 async def t_update_project(client: FieldNotesClient, params: UpdateProjectInput) -> dict[str, Any]:
-    payload = params.model_dump(exclude_unset=True)
-    payload.pop("project_id", None)
-    p = await client.update_project(params.project_id, ProjectUpdate(**payload))
+    patch_data = params.patch.model_dump(exclude_unset=True)
+    p = await client.update_project(params.project_id, ProjectUpdate(**patch_data))
     return p.model_dump(mode="json")
 
 
@@ -238,10 +257,9 @@ async def t_create_cell(client: FieldNotesClient, params: CreateCellInput) -> di
 
 
 async def t_update_cell(client: FieldNotesClient, params: UpdateCellInput) -> dict[str, Any]:
-    payload = params.model_dump(exclude_unset=True)
-    payload.pop("cell_id", None)
+    patch_data = params.patch.model_dump(exclude_unset=True)
     try:
-        c = await client.update_cell(params.cell_id, CellUpdate(**payload))
+        c = await client.update_cell(params.cell_id, CellUpdate(**patch_data))
     except LockedCellError as err:
         return _locked_cell_error(err)
     return c.model_dump(mode="json")
@@ -348,23 +366,14 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
             CreateProjectInput(name=name, subtitle=subtitle, repo=repo),
         )
 
-    @mcp.tool(description="Update a project's metadata (name/subtitle/repo).")
-    async def update_project(
-        project_id: UUID,
-        name: str | None = None,
-        subtitle: str | None = None,
-        repo: str | None = None,
-    ) -> dict[str, Any]:
-        # Build a real validated instance, preserving "set"-ness so we PATCH only what was passed.
-        fields: dict[str, Any] = {"project_id": project_id}
-        if name is not None:
-            fields["name"] = name
-        if subtitle is not None:
-            fields["subtitle"] = subtitle
-        if repo is not None:
-            fields["repo"] = repo
-        params = UpdateProjectInput(**fields)
-        return await t_update_project(get_client(), params)
+    @mcp.tool(
+        description=(
+            "Update a project's metadata. Pass the writable fields nested under `patch`, "
+            "e.g. patch={'subtitle': ''} to clear the subtitle. Both project_id and patch are required."
+        )
+    )
+    async def update_project(project_id: UUID, patch: ProjectPatch) -> dict[str, Any]:
+        return await t_update_project(get_client(), UpdateProjectInput(project_id=project_id, patch=patch))
 
     @mcp.tool(description="Delete a project (cascades to its cells). Irreversible.")
     async def delete_project(project_id: UUID) -> dict[str, str]:
@@ -425,41 +434,15 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
 
     @mcp.tool(
         description=(
-            "Update a cell's writable fields. Send ONLY the fields you want to change. "
-            "If you want a small tweak inside an existing visual.sandbox (e.g. delete a "
-            "<p class='hint'> block), use patch_visual_sandbox INSTEAD — sending the whole "
-            "sandbox here can exceed tool-call channel limits and silently arrive as {}. "
-            "Verdict and locked are NOT writable here — those are the human's authority. "
-            "Returns {error: 'locked_cell', ...} if the cell is locked."
+            "Update a cell. Both `cell_id` and `patch` are required. Put the writable fields "
+            "nested inside `patch`, e.g. patch={'conclusion': '', 'status': 'verified'}. "
+            "Send ONLY the fields you want to change. For sandbox-internal edits use "
+            "patch_visual_sandbox instead — bundling a large visual here can exceed tool-call "
+            "channel limits. Verdict/locked are human-only. Locked cells → {error:'locked_cell',...}."
         )
     )
-    async def update_cell(
-        cell_id: UUID,
-        title: str | None = None,
-        agent_id: str | None = None,
-        status: CellStatus | None = None,
-        conclusion: str | None = None,
-        metrics: list[MetricItem] | None = None,
-        visual: Visual | None = None,
-        video: VideoSlot | None = None,
-        deep: DeepBlock | None = None,
-        body: str | None = None,
-    ) -> dict[str, Any]:
-        fields: dict[str, Any] = {"cell_id": cell_id}
-        for k, v in {
-            "title": title,
-            "agent_id": agent_id,
-            "status": status,
-            "conclusion": conclusion,
-            "metrics": metrics,
-            "visual": visual,
-            "video": video,
-            "deep": deep,
-            "body": body,
-        }.items():
-            if v is not None:
-                fields[k] = v
-        return await t_update_cell(get_client(), UpdateCellInput(**fields))
+    async def update_cell(cell_id: UUID, patch: CellPatch) -> dict[str, Any]:
+        return await t_update_cell(get_client(), UpdateCellInput(cell_id=cell_id, patch=patch))
 
     @mcp.tool(
         description=(
