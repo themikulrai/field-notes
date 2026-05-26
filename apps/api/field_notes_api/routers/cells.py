@@ -85,14 +85,29 @@ async def _project_cells_ordered(session: AsyncSession, pid: uuid.UUID) -> list[
 
 
 async def _renumber(session: AsyncSession, cells: list[Cell]) -> None:
-    """Stable renumber to 0..N-1 in current list order. Avoids unique-constraint
-    collisions by first parking everything at large negative positions, then
-    assigning final positions."""
-    for i, c in enumerate(cells):
-        c.position = -(i + 1) - 10_000_000
+    """Renumber `cells` to positions 0..N-1 in current list order, touching ONLY
+    rows whose position actually changes.
+
+    Why this matters: SQLAlchemy's `onupdate=func.now()` bumps `updated_at` on
+    every row whose mapped attributes are set, even to the same value with
+    `position`. The verdict-staleness signal (`cell.updated_at > verdict.at`)
+    relies on `updated_at` being touched only when the user edits a cell —
+    bumping it on unrelated cells during a neighbour's reorder/delete poisons
+    that signal.
+
+    Strategy: identify the contiguous "dirty" subset (cells whose position !=
+    target). Park them at distinct negative positions, flush, then assign final
+    positions and flush. This keeps the unique constraint satisfied on backends
+    (SQLite) that check it row-by-row instead of at statement end.
+    """
+    dirty: list[tuple[Cell, int]] = [(c, i) for i, c in enumerate(cells) if c.position != i]
+    if not dirty:
+        return
+    for j, (c, _) in enumerate(dirty):
+        c.position = -(j + 1) - 10_000_000
     await session.flush()
-    for i, c in enumerate(cells):
-        c.position = i
+    for c, target in dirty:
+        c.position = target
     await session.flush()
 
 
@@ -181,7 +196,32 @@ async def update_cell(
     for k, v in data.items():
         if k == "metrics" and v is not None:
             c.metrics = v  # already plain dicts from model_dump
-        elif k in ("visual", "video", "deep") and v is not None:
+        elif k == "visual" and v is not None:
+            # Deep-merge sandbox-on-sandbox so PATCH with only `html` does not
+            # clobber existing `js`/`css` (VisualSandbox schema defaults them
+            # to "" — indistinguishable from "not provided"). For any other
+            # case (kind change, non-sandbox), replace as before.
+            existing = c.visual
+            if (
+                isinstance(existing, dict)
+                and existing.get("kind") == "sandbox"
+                and isinstance(v, dict)
+                and v.get("kind") == "sandbox"
+            ):
+                merged = dict(existing)
+                for vk, vv in v.items():
+                    if vk == "kind":
+                        continue
+                    # Treat "" as "not provided" since it's the schema default
+                    # and indistinguishable from an unset field.
+                    if isinstance(vv, str) and vv == "":
+                        continue
+                    merged[vk] = vv
+                merged["kind"] = "sandbox"
+                c.visual = merged
+            else:
+                c.visual = v
+        elif k in ("video", "deep") and v is not None:
             setattr(c, k, v)
         elif k == "status" and v is not None:
             c.status = v.value if hasattr(v, "value") else v

@@ -140,6 +140,55 @@ async def test_reorder_validation_error(client, project_id) -> None:
     assert r.status_code == 422
 
 
+async def _updated_at_map(client, pid: str) -> dict[str, str]:
+    r = await client.get(f"/projects/{pid}/cells")
+    assert r.status_code == 200
+    return {x["id"]: x["updated_at"] for x in r.json()}
+
+
+async def test_reorder_does_not_bump_unrelated_updated_at(client, project_id) -> None:
+    cells = []
+    for t in ["A", "B", "C", "D", "E"]:
+        cells.append(await _create_cell(client, project_id, title=t))
+    before = await _updated_at_map(client, project_id)
+    # Move D (idx 3) to position 0 -> [D, A, B, C, E]. Affected range = [0,3].
+    r = await client.post(f"/cells/{cells[3]['id']}/reorder", json={"position": 0})
+    assert r.status_code == 200, r.text
+    after = await _updated_at_map(client, project_id)
+    # E (idx 4) was outside the shifted range — must be untouched.
+    assert before[cells[4]["id"]] == after[cells[4]["id"]]
+    # A, B, C, D all had their positions shifted — they may bump.
+    # (We don't require them to bump, but the key invariant is E untouched.)
+    # Order is sanity-checked too.
+    r = await client.get(f"/projects/{project_id}/cells")
+    assert [x["title"] for x in r.json()] == ["D", "A", "B", "C", "E"]
+
+
+async def test_delete_only_bumps_subsequent_updated_at(client, project_id) -> None:
+    cells = []
+    for t in ["A", "B", "C", "D", "E"]:
+        cells.append(await _create_cell(client, project_id, title=t))
+    before = await _updated_at_map(client, project_id)
+    r = await client.delete(f"/cells/{cells[2]['id']}")
+    assert r.status_code == 204
+    after = await _updated_at_map(client, project_id)
+    # A (idx 0) and B (idx 1) sit before the deleted cell — must NOT bump.
+    assert before[cells[0]["id"]] == after[cells[0]["id"]]
+    assert before[cells[1]["id"]] == after[cells[1]["id"]]
+
+
+async def test_create_at_end_does_not_bump_existing(client, project_id) -> None:
+    cells = []
+    for t in ["A", "B", "C"]:
+        cells.append(await _create_cell(client, project_id, title=t))
+    before = await _updated_at_map(client, project_id)
+    new_cell = await _create_cell(client, project_id, title="D")
+    after = await _updated_at_map(client, project_id)
+    for c in cells:
+        assert before[c["id"]] == after[c["id"]], f"{c['title']} updated_at bumped"
+    assert new_cell["position"] == 3
+
+
 async def _create_sandbox(client, pid: str, html="<div>old</div><p class='hint'>x</p>", js="", css="") -> dict:
     return await _create_cell(
         client,
@@ -222,3 +271,53 @@ async def test_patch_sandbox_locked_returns_409(client, project_id) -> None:
         json={"target": "html", "find": "<div>old</div>", "replace": "<div>new</div>"},
     )
     assert r.status_code == 409
+
+
+async def test_patch_visual_preserves_unspecified_sandbox_fields(client, project_id) -> None:
+    """PATCH /cells/{id} with only `html` must not clobber existing js/css."""
+    c = await _create_sandbox(
+        client, project_id, html="<h1>orig</h1>", js="console.log('j')", css="body{}",
+    )
+    r = await client.patch(
+        f"/cells/{c['id']}",
+        json={"visual": {"kind": "sandbox", "html": "<h1>new</h1>"}},
+    )
+    assert r.status_code == 200, r.text
+    v = r.json()["visual"]
+    assert v["html"] == "<h1>new</h1>"
+    assert v["js"] == "console.log('j')"
+    assert v["css"] == "body{}"
+
+
+async def test_patch_visual_replaces_on_kind_change(client, project_id) -> None:
+    """Switching kind (sandbox -> svg) must replace fully, not merge."""
+    c = await _create_sandbox(
+        client, project_id, html="<h1>h</h1>", js="j", css="c",
+    )
+    r = await client.patch(
+        f"/cells/{c['id']}",
+        json={"visual": {"kind": "svg", "source": "<svg/>"}},
+    )
+    assert r.status_code == 200, r.text
+    v = r.json()["visual"]
+    assert v["kind"] == "svg"
+    assert v["source"] == "<svg/>"
+    assert "html" not in v
+    assert "js" not in v
+
+
+async def test_patch_visual_empty_string_does_not_overwrite(client, project_id) -> None:
+    """Explicit "" is the schema default and indistinguishable from unset;
+    must NOT clobber existing content."""
+    c = await _create_sandbox(
+        client, project_id, html="<h1>keep</h1>", js="keepjs", css="keepcss",
+    )
+    r = await client.patch(
+        f"/cells/{c['id']}",
+        json={"visual": {"kind": "sandbox", "html": "", "js": "", "css": ""}},
+    )
+    assert r.status_code == 200, r.text
+    v = r.json()["visual"]
+    assert v["html"] == "<h1>keep</h1>"
+    assert v["js"] == "keepjs"
+    assert v["css"] == "keepcss"
