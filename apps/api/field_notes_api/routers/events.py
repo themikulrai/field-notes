@@ -22,13 +22,31 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from ..auth import require_api_key, require_api_key_query
+from datetime import UTC, datetime
+
+from ..auth import SSE_TOKEN_TTL_SECONDS, mint_sse_token, require_api_key, require_api_key_query
 from ..config import get_settings
 from ..db import get_session
 from ..events_bus import bus
 from ..models import Event
 
 router = APIRouter(tags=["events"])
+
+
+@router.post("/sse-token", dependencies=[Depends(require_api_key)])
+async def sse_token() -> dict[str, str | int]:
+    """Mint a short-lived HMAC token for `/events?token=...`.
+
+    Auth via header `X-Field-Notes-Key` (no key in URL). Token TTL is
+    `SSE_TOKEN_TTL_SECONDS`; frontend should refresh ~10s before `expires_at`.
+    Token is never logged.
+    """
+    token, exp = mint_sse_token(SSE_TOKEN_TTL_SECONDS)
+    return {
+        "token": token,
+        "expires_at": datetime.fromtimestamp(exp, tz=UTC).isoformat(),
+        "ttl_seconds": SSE_TOKEN_TTL_SECONDS,
+    }
 
 
 @router.get("/events", dependencies=[Depends(require_api_key_query)])
