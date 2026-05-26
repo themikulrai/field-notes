@@ -20,6 +20,7 @@ from field_notes_schema import (
     CellRead,
     CellUpdate,
     EventEnvelope,
+    AppendSandboxBody,
     PatchVisualSandboxRequest,
     ProjectCreate,
     ProjectRead,
@@ -159,6 +160,14 @@ class FieldNotesClient:
     async def patch_visual_sandbox(self, cid: uuid.UUID, body: PatchVisualSandboxRequest) -> CellRead:
         r = await self._http.post(
             f"/cells/{cid}/visual-sandbox/patch",
+            json=body.model_dump(mode="json"),
+        )
+        self._raise_for(r, cell_id=cid)
+        return CellRead.model_validate(r.json())
+
+    async def append_visual_sandbox(self, cid: uuid.UUID, body: AppendSandboxBody) -> CellRead:
+        r = await self._http.post(
+            f"/cells/{cid}/visual-sandbox/append",
             json=body.model_dump(mode="json"),
         )
         self._raise_for(r, cell_id=cid)

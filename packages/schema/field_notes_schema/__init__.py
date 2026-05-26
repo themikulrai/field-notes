@@ -22,6 +22,10 @@ class CellStatus(str, Enum):
     open = "open"
     verified = "verified"
     rejected = "rejected"
+    # `ready` is used by the append_visual_sandbox endpoint to signal that
+    # a chunked sandbox build has been finalized. It is distinct from
+    # `verified` (which is a human verdict).
+    ready = "ready"
 
 
 class CellKind(str, Enum):
@@ -201,6 +205,22 @@ class PatchVisualSandboxRequest(BaseModel):
     expected_count: int = Field(default=1, ge=1)
 
 
+class AppendSandboxBody(BaseModel):
+    """Append a small chunk to a cell's visual.sandbox.{html,js,css}.
+
+    Exists because the MCP tool-call channel clamps inputs at ~50 KB, so large
+    sandboxes have to be built up in small pieces. `seq` is an ordering guard:
+    it must equal the number of chunks already appended for that target (so the
+    first append uses seq=0). On `finalize=True`, the cell transitions to
+    status="ready" and the per-target chunk counters are cleared.
+    """
+
+    target: Literal["html", "js", "css"]
+    chunk: str
+    seq: int = Field(ge=0)
+    finalize: bool = False
+
+
 class EventEnvelope(BaseModel):
     id: UUID
     at: datetime
@@ -211,6 +231,7 @@ class EventEnvelope(BaseModel):
 
 
 __all__ = [
+    "AppendSandboxBody",
     "CellCreate",
     "CellKind",
     "CellRead",

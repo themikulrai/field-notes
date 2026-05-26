@@ -18,6 +18,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from field_notes_schema import (
+    AppendSandboxBody,
     CellCreate,
     CellKind,
     CellRead,
@@ -284,6 +285,86 @@ async def patch_visual_sandbox(
         project_id=c.project_id,
         cell_id=c.id,
         payload={"fields": ["visual"], "patch": {"target": body.target, "count": actual}},
+        source=_source(request),
+    )
+    await session.commit()
+    schedule_publish(env)
+    fresh = await load_cell_full(session, cid)
+    assert fresh is not None
+    return cell_to_read(fresh, fresh.verdict)
+
+
+@router.post("/cells/{cid}/visual-sandbox/append", response_model=CellRead)
+async def append_visual_sandbox(
+    cid: uuid.UUID,
+    body: AppendSandboxBody,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> CellRead:
+    """Append a chunk to a cell's visual.sandbox.{html,js,css}.
+
+    Workaround for the MCP tool-call channel clamping inputs at ~50 KB — the
+    agent builds large sandboxes in pieces. `seq` MUST equal the current count
+    of chunks already appended for that target (so the first append for a
+    target uses seq=0). The counter lives in `c.visual["_chunks"]` and is
+    cleared on `finalize=True`, which also flips status→"ready".
+    """
+    c = await session.get(Cell, cid)
+    if c is None:
+        raise HTTPException(status_code=404, detail="cell not found")
+    if c.locked:
+        raise HTTPException(status_code=409, detail="cell is locked")
+
+    if c.visual is None:
+        new_visual: dict = {"kind": "sandbox", "html": "", "js": "", "css": "", "_chunks": {}}
+    elif isinstance(c.visual, dict) and c.visual.get("kind") == "sandbox":
+        new_visual = dict(c.visual)
+        new_visual.setdefault("html", "")
+        new_visual.setdefault("js", "")
+        new_visual.setdefault("css", "")
+        new_visual.setdefault("_chunks", {})
+        # ensure _chunks is a dict (defensive against external writes)
+        if not isinstance(new_visual["_chunks"], dict):
+            new_visual["_chunks"] = {}
+        else:
+            new_visual["_chunks"] = dict(new_visual["_chunks"])
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail="cell has a non-sandbox visual; cannot append sandbox chunks",
+        )
+
+    expected_seq = int(new_visual["_chunks"].get(body.target, 0))
+    if body.seq != expected_seq:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"seq mismatch for target {body.target}: got seq={body.seq}, "
+                f"expected seq={expected_seq} (chunks already appended)"
+            ),
+        )
+
+    current = new_visual.get(body.target, "")
+    if not isinstance(current, str):
+        raise HTTPException(status_code=422, detail=f"visual.sandbox.{body.target} is not a string")
+    new_visual[body.target] = current + body.chunk
+    new_visual["_chunks"][body.target] = expected_seq + 1
+
+    if body.finalize:
+        new_visual.pop("_chunks", None)
+        c.status = CellStatus.ready.value
+
+    c.visual = new_visual
+    await session.flush()
+    env = await emit_event(
+        session,
+        "cell.updated",
+        project_id=c.project_id,
+        cell_id=c.id,
+        payload={
+            "fields": ["visual"] + (["status"] if body.finalize else []),
+            "append": {"target": body.target, "seq": body.seq, "finalize": body.finalize},
+        },
         source=_source(request),
     )
     await session.commit()

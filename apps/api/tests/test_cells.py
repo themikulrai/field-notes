@@ -321,3 +321,81 @@ async def test_patch_visual_empty_string_does_not_overwrite(client, project_id) 
     assert v["html"] == "<h1>keep</h1>"
     assert v["js"] == "keepjs"
     assert v["css"] == "keepcss"
+
+
+# ---------- append_visual_sandbox (chunked builder) ----------
+
+
+async def test_append_sandbox_concatenates_in_order(client, project_id) -> None:
+    c = await _create_cell(client, project_id, title="A")
+    chunks = ["<div>", "hello", "</div>"]
+    for i, ch in enumerate(chunks):
+        r = await client.post(
+            f"/cells/{c['id']}/visual-sandbox/append",
+            json={"target": "html", "chunk": ch, "seq": i},
+        )
+        assert r.status_code == 200, r.text
+    final = r.json()["visual"]
+    assert final["html"] == "<div>hello</div>"
+    assert final["kind"] == "sandbox"
+
+
+async def test_append_rejects_out_of_order_seq(client, project_id) -> None:
+    c = await _create_cell(client, project_id, title="A")
+    r = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/append",
+        json={"target": "html", "chunk": "x", "seq": 0},
+    )
+    assert r.status_code == 200, r.text
+    # chunks=1, sending seq=2 (skipping seq=1) must be rejected
+    r2 = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/append",
+        json={"target": "html", "chunk": "y", "seq": 2},
+    )
+    assert r2.status_code == 422
+    assert "seq" in r2.json()["detail"]
+
+
+async def test_append_initializes_visual_if_none(client, project_id) -> None:
+    # Empty cell → has no visual at all
+    r = await client.post(f"/projects/{project_id}/cells", json={"kind": "empty"})
+    assert r.status_code == 201, r.text
+    c = r.json()
+    assert c["visual"] is None
+    r2 = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/append",
+        json={"target": "js", "chunk": "console.log(1)", "seq": 0},
+    )
+    assert r2.status_code == 200, r2.text
+    v = r2.json()["visual"]
+    assert v["kind"] == "sandbox"
+    assert v["js"] == "console.log(1)"
+    assert v["html"] == ""
+    assert v["css"] == ""
+
+
+async def test_append_rejects_kind_change(client, project_id) -> None:
+    c = await _create_cell(
+        client, project_id, title="S",
+        visual={"kind": "svg", "source": "<svg/>"},
+    )
+    r = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/append",
+        json={"target": "html", "chunk": "<p/>", "seq": 0},
+    )
+    assert r.status_code == 422
+    assert "non-sandbox" in r.json()["detail"]
+
+
+async def test_append_finalize_sets_status_ready(client, project_id) -> None:
+    c = await _create_cell(client, project_id, title="A")
+    r = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/append",
+        json={"target": "html", "chunk": "<p>done</p>", "seq": 0, "finalize": True},
+    )
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["status"] == "ready"
+    assert out["visual"]["html"] == "<p>done</p>"
+    # _chunks cleared on finalize
+    assert "_chunks" not in out["visual"]

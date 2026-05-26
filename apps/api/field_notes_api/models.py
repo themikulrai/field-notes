@@ -65,7 +65,7 @@ class Cell(Base):
         UniqueConstraint("project_id", "position", name="uq_cells_project_position"),
         CheckConstraint("kind IN ('agent','markdown','empty')", name="ck_cells_kind"),
         CheckConstraint(
-            "status IS NULL OR status IN ('in_progress','open','verified','rejected')",
+            "status IS NULL OR status IN ('in_progress','open','verified','rejected','ready')",
             name="ck_cells_status",
         ),
     )
