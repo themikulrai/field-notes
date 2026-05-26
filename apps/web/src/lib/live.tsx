@@ -12,6 +12,14 @@ export function useLiveEvents(): void {
     if (!activeProjectId) return;
     const seen = new Set<string>();
     const stream = openEventStream(activeProjectId, (env) => {
+      // Resync sentinel: bus dropped events; refetch state from scratch.
+      // No `id` on this envelope — must short-circuit before the dedup set.
+      if (env.kind === "resync") {
+        void useStore.getState().loadProjects();
+        const pid = useStore.getState().activeProjectId;
+        if (pid) void useStore.getState().loadCells(pid);
+        return;
+      }
       if (seen.has(env.id)) return;
       seen.add(env.id);
       if (seen.size > 200) {
