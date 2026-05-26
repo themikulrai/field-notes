@@ -24,6 +24,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from field_notes_schema import (
+    AppendSandboxBody,
     CellCreate,
     CellKind,
     CellStatus,
@@ -56,6 +57,7 @@ TOOL_NAMES: list[str] = [
     "create_cell",
     "update_cell",
     "patch_visual_sandbox",
+    "append_visual_sandbox",
     "reorder_cell",
     "delete_cell",
     "set_filter",
@@ -99,8 +101,31 @@ class UpdateProjectInput(BaseModel):
     # non-nullable fields. Opus 4.7 reliably emits input={} for tools whose schema
     # is "1 required + N anyOf[T,null] default=null optionals" — the nested form
     # forces the model to fill both fields and stops the empty-call failure mode.
+    #
+    # Forgiving lift: agents (esp. Opus) often emit flat args like
+    # {project_id, name: "..."} despite the nested schema. The before-validator
+    # lifts known ProjectPatch fields at top level into a `patch` wrapper.
+    # Unknown top-level keys still raise via extra='forbid' below.
+    model_config = ConfigDict(extra="forbid")
     project_id: UUID
     patch: ProjectPatch
+
+    @model_validator(mode="before")
+    @classmethod
+    def _lift_flat_patch_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        patch_fields = set(ProjectPatch.model_fields.keys())
+        flat_present = {k: v for k, v in data.items() if k in patch_fields}
+        if not flat_present:
+            return data
+        if "patch" in data:
+            raise ValueError(
+                "ambiguous update: provide either nested `patch={...}` OR flat fields, not both"
+            )
+        rest = {k: v for k, v in data.items() if k not in patch_fields}
+        rest["patch"] = flat_present
+        return rest
 
 
 class ListCellsInput(BaseModel):
@@ -154,6 +179,25 @@ class UpdateCellInput(BaseModel):
     cell_id: UUID
     patch: CellPatch
 
+    @model_validator(mode="before")
+    @classmethod
+    def _lift_flat_patch_fields(cls, data: Any) -> Any:
+        # See UpdateProjectInput._lift_flat_patch_fields — same forgiving lift
+        # so flat agent calls like {cell_id, conclusion: "..."} are accepted.
+        if not isinstance(data, dict):
+            return data
+        patch_fields = set(CellPatch.model_fields.keys())
+        flat_present = {k: v for k, v in data.items() if k in patch_fields}
+        if not flat_present:
+            return data
+        if "patch" in data:
+            raise ValueError(
+                "ambiguous update: provide either nested `patch={...}` OR flat fields, not both"
+            )
+        rest = {k: v for k, v in data.items() if k not in patch_fields}
+        rest["patch"] = flat_present
+        return rest
+
 
 class PatchVisualSandboxInput(BaseModel):
     cell_id: UUID
@@ -161,6 +205,14 @@ class PatchVisualSandboxInput(BaseModel):
     find: str = Field(min_length=1)
     replace: str
     expected_count: int = Field(default=1, ge=1)
+
+
+class AppendVisualSandboxInput(BaseModel):
+    cell_id: UUID
+    target: Literal["html", "js", "css"]
+    chunk: str
+    seq: int = Field(ge=0)
+    finalize: bool = False
 
 
 class ReorderCellInput(BaseModel):
@@ -274,6 +326,20 @@ async def t_patch_visual_sandbox(client: FieldNotesClient, params: PatchVisualSa
     )
     try:
         c = await client.patch_visual_sandbox(params.cell_id, body)
+    except LockedCellError as err:
+        return _locked_cell_error(err)
+    return c.model_dump(mode="json")
+
+
+async def t_append_visual_sandbox(client: FieldNotesClient, params: AppendVisualSandboxInput) -> dict[str, Any]:
+    body = AppendSandboxBody(
+        target=params.target,
+        chunk=params.chunk,
+        seq=params.seq,
+        finalize=params.finalize,
+    )
+    try:
+        c = await client.append_visual_sandbox(params.cell_id, body)
     except LockedCellError as err:
         return _locked_cell_error(err)
     return c.model_dump(mode="json")
@@ -399,7 +465,10 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
         description=(
             "Create a cell in a project. kind=agent|markdown|empty. "
             "Markdown cells take `body` only; agent cells take title/conclusion/metrics/visual/video/deep; "
-            "empty cells take no payload."
+            "empty cells take no payload. "
+            "For sandboxes larger than ~40 KB, create the cell without `visual` and use "
+            "append_visual_sandbox to build it up in chunks — the tool-call channel clamps "
+            "large inputs and can silently arrive empty."
         )
     )
     async def create_cell(
@@ -469,6 +538,35 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
                 find=find,
                 replace=replace,
                 expected_count=expected_count,
+            ),
+        )
+
+    @mcp.tool(
+        description=(
+            "Append a small chunk to a cell's visual.sandbox.{html,js,css}. "
+            "Use this to build large sandboxes in pieces — the tool-call channel clamps "
+            "inputs around 50 KB, so anything bigger must be chunked here. "
+            "`seq` MUST equal the number of chunks already appended for that target "
+            "(start at 0 for the first chunk on a target). On `finalize=True` the cell's "
+            "status transitions to 'ready' and the per-target chunk counters are cleared. "
+            "Returns {error: 'locked_cell', ...} if the cell is locked."
+        )
+    )
+    async def append_visual_sandbox(
+        cell_id: UUID,
+        target: Literal["html", "js", "css"],
+        chunk: str,
+        seq: int,
+        finalize: bool = False,
+    ) -> dict[str, Any]:
+        return await t_append_visual_sandbox(
+            get_client(),
+            AppendVisualSandboxInput(
+                cell_id=cell_id,
+                target=target,
+                chunk=chunk,
+                seq=seq,
+                finalize=finalize,
             ),
         )
 

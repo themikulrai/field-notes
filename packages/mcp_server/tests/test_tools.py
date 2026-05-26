@@ -306,3 +306,72 @@ async def test_t_tail_events_passes_limit() -> None:
         out = await T.t_tail_events(c, T.TailEventsInput(limit=5))
     assert len(out) == 1
     assert out[0]["kind"] == "cell.created"
+
+
+# ----- Forgiving flat-args lift for update_cell / update_project ----------
+# Agents (Opus 4.7) routinely emit `{cell_id, conclusion: "..."}` despite the
+# nested-`patch` schema. The before-validator lifts known patch fields into a
+# `patch` wrapper while still rejecting unknown top-level keys.
+
+
+def test_update_cell_accepts_flat_args() -> None:
+    cid = uuid.uuid4()
+    m = T.UpdateCellInput.model_validate({"cell_id": str(cid), "conclusion": "done", "status": "verified"})
+    assert m.cell_id == cid
+    assert m.patch.conclusion == "done"
+    assert m.patch.status == "verified"
+
+
+def test_update_cell_accepts_nested_patch() -> None:
+    cid = uuid.uuid4()
+    m = T.UpdateCellInput.model_validate({"cell_id": str(cid), "patch": {"conclusion": "done"}})
+    assert m.patch.conclusion == "done"
+
+
+def test_update_cell_unknown_field_rejected() -> None:
+    import pytest
+
+    cid = uuid.uuid4()
+    with pytest.raises(Exception):  # noqa: B017 — pydantic ValidationError
+        T.UpdateCellInput.model_validate({"cell_id": str(cid), "typo_field": "x"})
+
+
+def test_update_cell_both_flat_and_nested_rejected() -> None:
+    import pytest
+
+    cid = uuid.uuid4()
+    with pytest.raises(Exception):  # noqa: B017
+        T.UpdateCellInput.model_validate(
+            {"cell_id": str(cid), "patch": {"conclusion": "a"}, "conclusion": "b"}
+        )
+
+
+def test_update_project_accepts_flat_args() -> None:
+    pid = uuid.uuid4()
+    m = T.UpdateProjectInput.model_validate({"project_id": str(pid), "name": "renamed"})
+    assert m.project_id == pid
+    assert m.patch.name == "renamed"
+
+
+def test_update_project_accepts_nested_patch() -> None:
+    pid = uuid.uuid4()
+    m = T.UpdateProjectInput.model_validate({"project_id": str(pid), "patch": {"name": "renamed"}})
+    assert m.patch.name == "renamed"
+
+
+def test_update_project_unknown_field_rejected() -> None:
+    import pytest
+
+    pid = uuid.uuid4()
+    with pytest.raises(Exception):  # noqa: B017
+        T.UpdateProjectInput.model_validate({"project_id": str(pid), "bogus": "x"})
+
+
+def test_update_project_both_flat_and_nested_rejected() -> None:
+    import pytest
+
+    pid = uuid.uuid4()
+    with pytest.raises(Exception):  # noqa: B017
+        T.UpdateProjectInput.model_validate(
+            {"project_id": str(pid), "patch": {"name": "a"}, "name": "b"}
+        )
