@@ -2,8 +2,19 @@
 // Supports: # / ## / ### / #### headings, **bold**, *italic*, `code`, [link](url),
 // > blockquote, - / * lists, --- hr, paragraphs.
 
+import DOMPurify from "isomorphic-dompurify";
+
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Allow only well-known safe URL schemes / relative / fragment links. Anything
+// else (javascript:, data:, vbscript:, etc.) is rejected so the renderer can
+// fall back to plain text. Leading whitespace is stripped before testing so
+// `[x]( javascript:...)` cannot smuggle a scheme past the check.
+export function isSafeHref(url: string): boolean {
+  const trimmed = url.trim();
+  return /^(https?:|mailto:|\/|#)/i.test(trimmed);
 }
 
 function renderInline(s: string): string {
@@ -12,10 +23,10 @@ function renderInline(s: string): string {
   out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   out = out.replace(/(^|\W)\*([^*\n]+)\*(?=\W|$)/g, "$1<em>$2</em>");
   out = out.replace(/_([^_\n]+)_/g, "<em>$1</em>");
-  out = out.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener">$1</a>',
-  );
+  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text: string, url: string) => {
+    if (!isSafeHref(url)) return text;
+    return `<a href="${url}" target="_blank" rel="noopener">${text}</a>`;
+  });
   return out;
 }
 
@@ -108,25 +119,9 @@ export function renderMarkdown(src: string | null | undefined): string {
   return blocks.join("");
 }
 
-// Sanitize a chunk of inline SVG/HTML. Removes <script>, <iframe>, etc, and
-// any on* event attributes and javascript: URLs. Regex-only — not a full
-// DOMPurify, but good enough for trusted-author content with light hygiene.
-export function sanitizeSvg(src: string): string {
-  let out = src;
-  // Remove dangerous tags entirely (including their inner content).
-  const danger = ["script", "iframe", "object", "embed", "link", "meta", "style"];
-  for (const tag of danger) {
-    const open = new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?</${tag}>`, "gi");
-    const selfClose = new RegExp(`<${tag}\\b[^>]*/?>`, "gi");
-    out = out.replace(open, "");
-    out = out.replace(selfClose, "");
-  }
-  // Strip event handler attributes (on*="..." or on*='...' or on*=bare).
-  out = out.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "");
-  out = out.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "");
-  out = out.replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, "");
-  // Strip javascript: URLs in href/src/xlink:href.
-  out = out.replace(/(href|src|xlink:href)\s*=\s*"\s*javascript:[^"]*"/gi, '$1="#"');
-  out = out.replace(/(href|src|xlink:href)\s*=\s*'\s*javascript:[^']*'/gi, "$1='#'");
-  return out;
+// Sanitize a chunk of inline SVG. Delegates to DOMPurify (isomorphic-dompurify)
+// with the built-in SVG + SVG filters profiles so element/attribute allow-listing
+// happens against a real DOM rather than the previous brittle regex pass.
+export function sanitizeSvg(svg: string): string {
+  return DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } });
 }
