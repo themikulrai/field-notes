@@ -1,37 +1,25 @@
 // Verify that a `resync` SSE event triggers loadProjects + loadCells.
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
+import type { EventEnvelope } from "./types";
 
-type ESHandler = ((ev: MessageEvent<string>) => void) | null;
+type Listener = (env: EventEnvelope) => void;
 
-class MockEventSource {
-  static last: MockEventSource | null = null;
-  onmessage: ESHandler = null;
-  onopen: (() => void) | null = null;
-  onerror: ((e: unknown) => void) | null = null;
-  url: string;
-  constructor(url: string) {
-    this.url = url;
-    MockEventSource.last = this;
-  }
-  close() {}
-  emit(data: string) {
-    this.onmessage?.({ data } as MessageEvent<string>);
-  }
-}
+let capturedListener: Listener | null = null;
 
-const ORIG_ES = (globalThis as { EventSource?: unknown }).EventSource;
+vi.mock("./events", () => ({
+  openEventStream: (_projectId: string, listener: Listener) => {
+    capturedListener = listener;
+    return { close: () => {} };
+  },
+}));
 
 describe("useLiveEvents resync handling", () => {
   beforeEach(() => {
+    capturedListener = null;
     localStorage.setItem("field-notes-key", "k");
-    (globalThis as unknown as { EventSource: unknown }).EventSource = MockEventSource;
     vi.resetModules();
-  });
-  afterEach(() => {
-    (globalThis as unknown as { EventSource: unknown }).EventSource = ORIG_ES;
-    localStorage.clear();
   });
 
   it("calls loadProjects and loadCells when a resync event arrives", async () => {
@@ -50,10 +38,10 @@ describe("useLiveEvents resync handling", () => {
 
     renderHook(() => useLiveEvents());
 
-    expect(MockEventSource.last).not.toBeNull();
-    MockEventSource.last!.emit(JSON.stringify({ kind: "resync", at: new Date().toISOString() }));
+    expect(capturedListener).not.toBeNull();
+    capturedListener!({ kind: "resync", at: new Date().toISOString() } as unknown as EventEnvelope);
 
-    // applyEvent is async; allow microtasks to drain.
+    // applyEvent + refetch are async; allow microtasks to drain.
     await Promise.resolve();
     await Promise.resolve();
 
@@ -76,9 +64,13 @@ describe("useLiveEvents resync handling", () => {
     useStore.setState({ loadProjects, loadCells, applyEvent } as Partial<ReturnType<typeof useStore.getState>>);
 
     renderHook(() => useLiveEvents());
-    MockEventSource.last!.emit(
-      JSON.stringify({ id: "e1", kind: "cell.updated", project_id: "p1", at: new Date().toISOString() }),
-    );
+    expect(capturedListener).not.toBeNull();
+    capturedListener!({
+      id: "e1",
+      kind: "cell.updated",
+      project_id: "p1",
+      at: new Date().toISOString(),
+    } as unknown as EventEnvelope);
     await Promise.resolve();
     await Promise.resolve();
 
