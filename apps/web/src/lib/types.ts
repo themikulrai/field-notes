@@ -48,6 +48,7 @@ export interface VideoSlot {
   label: string;
   duration: string;
   url?: string | null;
+  mime?: string | null;
 }
 
 export interface DeepBlock {
