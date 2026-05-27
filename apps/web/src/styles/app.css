@@ -323,8 +323,14 @@
     border: 1px solid var(--rule); background: var(--paper);
     border-radius: 8px; overflow: hidden;
   }
-  .metric { padding: 10px 14px; border-right: 1px solid var(--rule); }
+  .metric {
+    padding: 10px 14px; border-right: 1px solid var(--rule);
+    min-width: 0; overflow: hidden;
+  }
   .metric:last-child { border-right: none; }
+  .metric-k, .metric-v, .metric-d {
+    overflow-wrap: anywhere; word-break: break-word;
+  }
   .metric-k {
     font-family: var(--mono); font-size: 11px;
     letter-spacing: 0.04em; text-transform: uppercase;
