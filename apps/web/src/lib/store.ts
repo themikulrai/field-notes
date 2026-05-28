@@ -23,7 +23,32 @@ const COLLAPSED_CELLS_KEY = "field-notes-collapsed-cells";
 function loadCollapsed(): Record<string, Record<string, boolean>> {
   try {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(COLLAPSE_KEY) : null;
-    if (raw) return JSON.parse(raw);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, Record<string, boolean>>;
+    // One-shot migration: keys used to be `${cell.id}#${idx}`; strip the suffix.
+    // Existing entries are otherwise orphaned and sections appear expanded.
+    let migrated = false;
+    for (const pid of Object.keys(parsed)) {
+      const proj = parsed[pid];
+      for (const oldKey of Object.keys(proj)) {
+        const hash = oldKey.indexOf("#");
+        if (hash > 0) {
+          const newKey = oldKey.slice(0, hash);
+          // Don't clobber an existing new-shape entry; OR the booleans.
+          proj[newKey] = proj[newKey] || proj[oldKey];
+          delete proj[oldKey];
+          migrated = true;
+        }
+      }
+    }
+    if (migrated) {
+      try {
+        localStorage.setItem(COLLAPSE_KEY, JSON.stringify(parsed));
+      } catch {
+        /* ignore */
+      }
+    }
+    return parsed;
   } catch {
     /* ignore */
   }
@@ -296,6 +321,10 @@ export const useStore = create<StoreState>((set, get) => ({
       // bottom, then teleports" flicker while loadCells is in flight.
       set((s) => {
         const arr = s.cellsByProject[pid] || [];
+        // SSE may have already added this cell via loadCells; don't double it.
+        if (arr.some((x) => x.id === c.id)) {
+          return s;
+        }
         const anchorId = (body as { after_cell_id?: string | null }).after_cell_id ?? null;
         let insertAt: number;
         if (anchorId == null) {

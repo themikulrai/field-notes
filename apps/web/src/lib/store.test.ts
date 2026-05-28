@@ -234,6 +234,67 @@ describe("store optimistic updates", () => {
     expect(useStore.getState().cellsByProject.p1.map((c) => c.id)).toEqual(["A", "B", "C", "NEW"]);
   });
 
+  it("createCell dedups when the cell is already present (SSE arrived first)", async () => {
+    const { useStore } = await import("./store");
+    useStore.setState({
+      projects: [{ id: "p1", name: "P", created_at: "", updated_at: "" }],
+      activeProjectId: "p1",
+      cellsByProject: {
+        p1: [
+          { id: "A", project_id: "p1", kind: "markdown", position: 0, created_at: "", updated_at: "", locked: false, body: "a" },
+          // Simulate SSE loadCells having already inserted NEW before POST returns.
+          { id: "NEW", project_id: "p1", kind: "markdown", position: 1, created_at: "", updated_at: "", locked: false, body: "" },
+          { id: "B", project_id: "p1", kind: "markdown", position: 2, created_at: "", updated_at: "", locked: false, body: "b" },
+        ],
+      },
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mkRes({
+        id: "NEW",
+        project_id: "p1",
+        kind: "markdown",
+        position: 1,
+        created_at: "",
+        updated_at: "",
+        locked: false,
+        body: "",
+      }),
+    ) as typeof fetch;
+
+    await useStore.getState().createCell("p1", { kind: "markdown", after_cell_id: "A", body: "" });
+    const ids = useStore.getState().cellsByProject.p1.map((c) => c.id);
+    expect(ids).toEqual(["A", "NEW", "B"]);
+    expect(ids.filter((id) => id === "NEW").length).toBe(1);
+  });
+
+  it("loadCollapsed migrates old-shape `id#idx` keys to new-shape `id` keys", async () => {
+    localStorage.setItem(
+      "field-notes-collapsed",
+      JSON.stringify({ p1: { "abc-123#0": true, "def-456": true } }),
+    );
+    const { useStore } = await import("./store");
+    const state = useStore.getState().collapsedSections;
+    expect(state.p1["abc-123"]).toBe(true);
+    expect(state.p1["def-456"]).toBe(true);
+    expect(state.p1["abc-123#0"]).toBeUndefined();
+    // And the migration was persisted back to localStorage.
+    const raw = localStorage.getItem("field-notes-collapsed");
+    const parsed = raw ? JSON.parse(raw) : null;
+    expect(parsed.p1["abc-123"]).toBe(true);
+    expect(parsed.p1["abc-123#0"]).toBeUndefined();
+  });
+
+  it("loadCollapsed migration OR-merges booleans (truthy wins) when both old and new keys exist", async () => {
+    localStorage.setItem(
+      "field-notes-collapsed",
+      JSON.stringify({ p1: { "abc#0": false, abc: true } }),
+    );
+    const { useStore } = await import("./store");
+    const state = useStore.getState().collapsedSections;
+    expect(state.p1["abc"]).toBe(true);
+    expect(state.p1["abc#0"]).toBeUndefined();
+  });
+
   it("deleteProject leaves activeProjectId alone when a non-active project is deleted", async () => {
     const { useStore } = await import("./store");
     useStore.setState({
