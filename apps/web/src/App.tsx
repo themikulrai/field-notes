@@ -1,7 +1,7 @@
 // Top-level layout: tabs + brand + stats + filter + cells list (with sections).
 // Wires the store; the live-events hook re-fetches/patches state from SSE.
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "./lib/store";
 import { useLiveEvents } from "./lib/live";
 import { getApiKey } from "./lib/api";
@@ -18,6 +18,7 @@ import { EmptyCell } from "./components/EmptyCell";
 import { CellInserter } from "./components/CellInserter";
 import { SectionGroup } from "./components/SectionGroup";
 import { TableOfContents } from "./components/TableOfContents";
+import { TocToggle } from "./components/TocToggle";
 import type { Cell as CellData, CellStatus } from "./lib/types";
 
 export default function App() {
@@ -31,6 +32,7 @@ function Main() {
   const cellsByProject = useStore((s) => s.cellsByProject);
   const filter = useStore((s) => s.filter);
   const collapsedSections = useStore((s) => s.collapsedSections);
+  const [tocHidden, setTocHidden] = useState(false);
 
   const loadProjects = useStore((s) => s.loadProjects);
   const loadCells = useStore((s) => s.loadCells);
@@ -241,8 +243,9 @@ function Main() {
         />
       </header>
 
-      <div className="page-body">
-        <TableOfContents sections={sections} />
+      <TocToggle hidden={tocHidden} onToggle={() => setTocHidden((v) => !v)} />
+      <div className={tocHidden ? "page-body toc-hidden" : "page-body"}>
+        {!tocHidden && <TableOfContents sections={sections} />}
         <main className="cells">
           {visibleCells.length === 0 && (
             <div className="empty-state mono">
