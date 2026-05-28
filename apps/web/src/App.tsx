@@ -243,10 +243,10 @@ function Main() {
         />
       </header>
 
-      <TocToggle hidden={tocHidden} onToggle={() => setTocHidden((v) => !v)} />
       <div className={tocHidden ? "page-body toc-hidden" : "page-body"}>
         {!tocHidden && <TableOfContents sections={sections} />}
         <main className="cells">
+          <TocToggle hidden={tocHidden} onToggle={() => setTocHidden((v) => !v)} />
           {visibleCells.length === 0 && (
             <div className="empty-state mono">
               no cells in <strong>{filter === "all" ? "this view" : filter}</strong> right now.

@@ -53,9 +53,11 @@
   .page-body.toc-hidden { grid-template-columns: minmax(0, 1fr); }
 
   .toc-toggle {
-    position: fixed;
+    position: sticky;
     top: calc(var(--top-h) + 12px);
-    left: 16px;
+    align-self: flex-start;
+    margin-left: -6px;
+    margin-bottom: -50px;
     z-index: 5;
     width: 28px; height: 28px;
     display: inline-flex; align-items: center; justify-content: center;
