@@ -66,8 +66,15 @@ export function inferSections(cells: Cell[]): SectionNode[] {
     else root.push(n);
   };
 
-  cells.forEach((cell, idx) => {
-    const key = `${cell.id}#${idx}`;
+  cells.forEach((cell) => {
+    // Key is the cell id only — stable across reorders so React doesn't
+    // unmount MarkdownCell editors (and lose draft text + focus) when a
+    // sibling shifts position. Previously included a `#idx` suffix; that
+    // suffix changed on every reorder/insert, causing unmount churn.
+    // Side effect: collapsedSections localStorage entries written with the
+    // old `id#idx` keys become orphaned — sections start expanded after
+    // upgrade. Acceptable: per-user UI state, no data loss.
+    const key = cell.id;
     if (cell.kind === "markdown") {
       const lvl = headingLevel(cell.body);
       if (lvl) {

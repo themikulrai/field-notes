@@ -109,6 +109,24 @@ describe("inferSections", () => {
     const k2 = inferSections(cells)[0].key;
     expect(k1).toBe(k2);
   });
+
+  it("key is the cell id (no #idx suffix) so React keys survive reorder", () => {
+    const cells = [agent("alpha", 0), agent("beta", 1)];
+    const tree = inferSections(cells);
+    expect(tree[0].key).toBe("alpha");
+    expect(tree[1].key).toBe("beta");
+  });
+
+  it("keys remain stable when a cell is inserted before another", () => {
+    // beta starts at idx 1; after inserting alpha before it, beta is at
+    // idx 2. Under the old `${id}#${idx}` scheme its key changed; under
+    // the new scheme it stays "beta".
+    const before = inferSections([agent("beta", 0)]);
+    const after = inferSections([agent("alpha", 0), agent("beta", 1)]);
+    const betaBefore = before.find((n) => n.cell?.id === "beta")!;
+    const betaAfter = after.find((n) => n.cell?.id === "beta")!;
+    expect(betaAfter.key).toBe(betaBefore.key);
+  });
 });
 
 describe("lastCellId", () => {

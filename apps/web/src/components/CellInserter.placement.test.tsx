@@ -200,10 +200,10 @@ describe("CellInserter placement", () => {
       agent("c1", 1, "alpha"),
       agent("c2", 2, "bravo"),
     ];
-    // Section key in inferSections is `${cell.id}#${idx}`. For cell "h" at
-    // visible index 0 the key is "h#0".
+    // Section key in inferSections is the header cell id ("h" here) —
+    // stable across reorders so React keys (and collapse state) survive.
     const { container } = await renderWithCells(cells, {
-      p1: { "h#0": true },
+      p1: { h: true },
     });
 
     // SectionGroup only renders .section-children when not collapsed.

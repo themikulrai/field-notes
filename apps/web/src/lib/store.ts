@@ -290,11 +290,29 @@ export const useStore = create<StoreState>((set, get) => ({
   createCell: async (pid, body) => {
     try {
       const c = await api.createCell(pid, body);
+      // Splice the new cell in at the position the server placed it
+      // (derived from after_cell_id in the request body), instead of
+      // appending and refetching. Avoids a perceived-lag "appears at
+      // bottom, then teleports" flicker while loadCells is in flight.
       set((s) => {
         const arr = s.cellsByProject[pid] || [];
-        return { cellsByProject: { ...s.cellsByProject, [pid]: [...arr, c] } };
+        const anchorId = (body as { after_cell_id?: string | null }).after_cell_id ?? null;
+        let insertAt: number;
+        if (anchorId == null) {
+          // null anchor → insert at the top of the list
+          insertAt = 0;
+        } else {
+          const found = arr.findIndex((x) => x.id === anchorId);
+          // Anchor missing (e.g. deleted between click and response):
+          // defensively append to the end so the cell isn't lost.
+          insertAt = found < 0 ? arr.length : found + 1;
+        }
+        const next = [...arr.slice(0, insertAt), c, ...arr.slice(insertAt)];
+        return { cellsByProject: { ...s.cellsByProject, [pid]: next } };
       });
-      await get().loadCells(pid);
+      // No loadCells refetch — the spliced position matches the server's
+      // canonical order. SSE cell.created will arrive shortly and patchCell
+      // (via applyEvent → loadCells) is idempotent for already-present ids.
     } catch (e) {
       set({ error: (e as Error).message });
     }

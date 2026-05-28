@@ -142,6 +142,98 @@ describe("store optimistic updates", () => {
     expect(useStore.getState().activeProjectId).toBeNull();
   });
 
+  it("createCell splices the new cell after the anchor (after_cell_id = A.id → [A, new, B, C])", async () => {
+    const { useStore } = await import("./store");
+    useStore.setState({
+      projects: [{ id: "p1", name: "P", created_at: "", updated_at: "" }],
+      activeProjectId: "p1",
+      cellsByProject: {
+        p1: [
+          { id: "A", project_id: "p1", kind: "markdown", position: 0, created_at: "", updated_at: "", locked: false, body: "a" },
+          { id: "B", project_id: "p1", kind: "markdown", position: 1, created_at: "", updated_at: "", locked: false, body: "b" },
+          { id: "C", project_id: "p1", kind: "markdown", position: 2, created_at: "", updated_at: "", locked: false, body: "c" },
+        ],
+      },
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mkRes({
+        id: "NEW",
+        project_id: "p1",
+        kind: "markdown",
+        position: 1,
+        created_at: "",
+        updated_at: "",
+        locked: false,
+        body: "",
+      }),
+    ) as typeof fetch;
+
+    await useStore.getState().createCell("p1", { kind: "markdown", after_cell_id: "A", body: "" });
+    expect(useStore.getState().cellsByProject.p1.map((c) => c.id)).toEqual(["A", "NEW", "B", "C"]);
+    // No follow-up loadCells: exactly one fetch (the POST).
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+  });
+
+  it("createCell with null anchor inserts at the top (→ [new, A, B, C])", async () => {
+    const { useStore } = await import("./store");
+    useStore.setState({
+      projects: [{ id: "p1", name: "P", created_at: "", updated_at: "" }],
+      activeProjectId: "p1",
+      cellsByProject: {
+        p1: [
+          { id: "A", project_id: "p1", kind: "markdown", position: 0, created_at: "", updated_at: "", locked: false, body: "a" },
+          { id: "B", project_id: "p1", kind: "markdown", position: 1, created_at: "", updated_at: "", locked: false, body: "b" },
+          { id: "C", project_id: "p1", kind: "markdown", position: 2, created_at: "", updated_at: "", locked: false, body: "c" },
+        ],
+      },
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mkRes({
+        id: "NEW",
+        project_id: "p1",
+        kind: "markdown",
+        position: 0,
+        created_at: "",
+        updated_at: "",
+        locked: false,
+        body: "",
+      }),
+    ) as typeof fetch;
+
+    await useStore.getState().createCell("p1", { kind: "markdown", after_cell_id: null, body: "" });
+    expect(useStore.getState().cellsByProject.p1.map((c) => c.id)).toEqual(["NEW", "A", "B", "C"]);
+  });
+
+  it("createCell with a missing anchor defensively appends to the end", async () => {
+    const { useStore } = await import("./store");
+    useStore.setState({
+      projects: [{ id: "p1", name: "P", created_at: "", updated_at: "" }],
+      activeProjectId: "p1",
+      cellsByProject: {
+        p1: [
+          { id: "A", project_id: "p1", kind: "markdown", position: 0, created_at: "", updated_at: "", locked: false, body: "a" },
+          { id: "B", project_id: "p1", kind: "markdown", position: 1, created_at: "", updated_at: "", locked: false, body: "b" },
+          { id: "C", project_id: "p1", kind: "markdown", position: 2, created_at: "", updated_at: "", locked: false, body: "c" },
+        ],
+      },
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mkRes({
+        id: "NEW",
+        project_id: "p1",
+        kind: "markdown",
+        position: 3,
+        created_at: "",
+        updated_at: "",
+        locked: false,
+        body: "",
+      }),
+    ) as typeof fetch;
+
+    await useStore.getState().createCell("p1", { kind: "markdown", after_cell_id: "missing-id", body: "" });
+    expect(useStore.getState().cellsByProject.p1.map((c) => c.id)).toEqual(["A", "B", "C", "NEW"]);
+  });
+
   it("deleteProject leaves activeProjectId alone when a non-active project is deleted", async () => {
     const { useStore } = await import("./store");
     useStore.setState({
