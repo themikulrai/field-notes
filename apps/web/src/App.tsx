@@ -114,6 +114,33 @@ function Main() {
   }, [visibleCells]);
   const flatTotal = visibleCells.length;
 
+  // Hooks must run on every render in the same order — keep them above the
+  // `if (!activeProject)` early-return below. `projectId` falls back to "" so
+  // the closure is still stable; the no-project branch never renders any
+  // CellInserter so the empty id is never used.
+  const projectId = activeProject?.id ?? "";
+  const insertAfter = useCallback(
+    (afterId: string | null, key: string): JSX.Element => (
+      <CellInserter
+        key={key}
+        onAddMarkdown={() => void addMarkdownCellAfter(projectId, afterId)}
+        onAddEmpty={() => void addEmptyCellAfter(projectId, afterId)}
+        onAddSection={() => void addSectionCellAfter(projectId, afterId)}
+      />
+    ),
+    [projectId, addMarkdownCellAfter, addEmptyCellAfter, addSectionCellAfter],
+  );
+
+  const lastCellIdBySectionKey = useMemo(() => {
+    const m = new Map<string, string>();
+    const walk = (n: SectionNode) => {
+      m.set(n.key, lastCellId(n));
+      n.children?.forEach(walk);
+    };
+    sections.forEach(walk);
+    return m;
+  }, [sections]);
+
   if (!activeProject) {
     return (
       <div className="page">
@@ -136,40 +163,6 @@ function Main() {
 
   const inProgress = counts.in_progress;
   const awaiting = counts.open;
-
-  // Anchor-based inserter: renders a gap that, when clicked, inserts a new
-  // cell *after* the cell with id `afterId` (or at the top of the list when
-  // `afterId === null`). `key` distinguishes sibling inserters in the same
-  // map so React doesn't warn about duplicate keys.
-  //
-  // Wrapped in useCallback so the three click-handler closures aren't
-  // reallocated for every inserter every render; identity is stable across
-  // renders that don't change the active project id or the store actions.
-  const projectId = activeProject.id;
-  const insertAfter = useCallback(
-    (afterId: string | null, key: string): JSX.Element => (
-      <CellInserter
-        key={key}
-        onAddMarkdown={() => void addMarkdownCellAfter(projectId, afterId)}
-        onAddEmpty={() => void addEmptyCellAfter(projectId, afterId)}
-        onAddSection={() => void addSectionCellAfter(projectId, afterId)}
-      />
-    ),
-    [projectId, addMarkdownCellAfter, addEmptyCellAfter, addSectionCellAfter],
-  );
-
-  // Memoize lastCellId(node) per section subtree so we don't re-walk the
-  // children every render for every inserter anchor. Map key is the
-  // SectionNode.key (cellId#idx, stable across re-renders of the same tree).
-  const lastCellIdBySectionKey = useMemo(() => {
-    const m = new Map<string, string>();
-    const walk = (n: SectionNode) => {
-      m.set(n.key, lastCellId(n));
-      n.children?.forEach(walk);
-    };
-    sections.forEach(walk);
-    return m;
-  }, [sections]);
 
   // index/total for the row-level up/down reorder buttons come from the
   // FLAT visibleCells array (see flatIndex above), not from each node's
