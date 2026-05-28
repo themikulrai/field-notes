@@ -1,12 +1,12 @@
 // Top-level layout: tabs + brand + stats + filter + cells list (with sections).
 // Wires the store; the live-events hook re-fetches/patches state from SSE.
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "./lib/store";
 import { useLiveEvents } from "./lib/live";
 import { getApiKey } from "./lib/api";
 import { fmtAgo } from "./lib/format";
-import { inferSections, type SectionNode } from "./lib/sections";
+import { inferSections, lastCellId, type SectionNode } from "./lib/sections";
 
 import { KeyGate } from "./components/KeyGate";
 import { ErrorBanner } from "./components/ErrorBanner";
@@ -51,6 +51,9 @@ function Main() {
   const addMarkdownCell = useStore((s) => s.addMarkdownCell);
   const addEmptyCell = useStore((s) => s.addEmptyCell);
   const addSectionCell = useStore((s) => s.addSectionCell);
+  const addMarkdownCellAfter = useStore((s) => s.addMarkdownCellAfter);
+  const addEmptyCellAfter = useStore((s) => s.addEmptyCellAfter);
+  const addSectionCellAfter = useStore((s) => s.addSectionCellAfter);
   const toggleSection = useStore((s) => s.toggleSection);
 
   // Load projects on mount
@@ -97,6 +100,20 @@ function Main() {
 
   const sections = useMemo(() => inferSections(visibleCells), [visibleCells]);
 
+  // Bug 5: the reorder up/down buttons must gate on TRUE flat-array
+  // boundaries, not on the local position inside a SectionNode's siblings.
+  // Otherwise the first child of a section has its "up" button disabled
+  // even though the backend supports moving across section boundaries on
+  // the flat array. We build a cell-id -> flat-index map from visibleCells
+  // (the same array that feeds inferSections) and pass those indices to
+  // child components for their disabled-state checks.
+  const flatIndex = useMemo(() => {
+    const m = new Map<string, number>();
+    visibleCells.forEach((c, i) => m.set(c.id, i));
+    return m;
+  }, [visibleCells]);
+  const flatTotal = visibleCells.length;
+
   if (!activeProject) {
     return (
       <div className="page">
@@ -120,10 +137,74 @@ function Main() {
   const inProgress = counts.in_progress;
   const awaiting = counts.open;
 
-  const renderNode = (node: SectionNode, idx: number, total: number): JSX.Element => {
+  // Anchor-based inserter: renders a gap that, when clicked, inserts a new
+  // cell *after* the cell with id `afterId` (or at the top of the list when
+  // `afterId === null`). `key` distinguishes sibling inserters in the same
+  // map so React doesn't warn about duplicate keys.
+  //
+  // Wrapped in useCallback so the three click-handler closures aren't
+  // reallocated for every inserter every render; identity is stable across
+  // renders that don't change the active project id or the store actions.
+  const projectId = activeProject.id;
+  const insertAfter = useCallback(
+    (afterId: string | null, key: string): JSX.Element => (
+      <CellInserter
+        key={key}
+        onAddMarkdown={() => void addMarkdownCellAfter(projectId, afterId)}
+        onAddEmpty={() => void addEmptyCellAfter(projectId, afterId)}
+        onAddSection={() => void addSectionCellAfter(projectId, afterId)}
+      />
+    ),
+    [projectId, addMarkdownCellAfter, addEmptyCellAfter, addSectionCellAfter],
+  );
+
+  // Memoize lastCellId(node) per section subtree so we don't re-walk the
+  // children every render for every inserter anchor. Map key is the
+  // SectionNode.key (cellId#idx, stable across re-renders of the same tree).
+  const lastCellIdBySectionKey = useMemo(() => {
+    const m = new Map<string, string>();
+    const walk = (n: SectionNode) => {
+      m.set(n.key, lastCellId(n));
+      n.children?.forEach(walk);
+    };
+    sections.forEach(walk);
+    return m;
+  }, [sections]);
+
+  // index/total for the row-level up/down reorder buttons come from the
+  // FLAT visibleCells array (see flatIndex above), not from each node's
+  // local sibling position. This lets users move a cell out of a section.
+  const renderNode = (node: SectionNode): JSX.Element => {
     if (node.kind === "section" && node.cell) {
       const sectionKey = node.key;
       const collapsed = !!collapsedSections[activeProject.id]?.[sectionKey];
+      const childNodes = node.children || [];
+      // Interleave a CellInserter ONLY between children. The parent loop
+      // emits the inserter after the section (anchored to lastCellId(node)),
+      // so duplicating it after the last child would stack two visually
+      // adjacent "+" rows anchored to the same cell id (Bug A).
+      //
+      // Empty-section case (Bug B): drop the top-of-children inserter too —
+      // it would otherwise anchor to the header cell id and duplicate the
+      // outside after-section inserter. Clicking the after-section inserter
+      // creates a cell with after_cell_id = headerId; the backend places it
+      // as the section's first child, which is the correct UX.
+      const interleavedChildren = childNodes.length === 0 ? null : (
+        <>
+          {insertAfter(node.cell.id, `ins-top-${node.cell.id}`)}
+          {childNodes.map((child, i) => (
+            <Fragment key={`${child.key}-wrap`}>
+              {renderNode(child)}
+              {i < childNodes.length - 1 &&
+                insertAfter(
+                  lastCellIdBySectionKey.get(child.key) ?? lastCellId(child),
+                  `ins-after-${child.key}`,
+                )}
+            </Fragment>
+          ))}
+        </>
+      );
+      const sectionFlatIdx = flatIndex.get(node.cell.id) ?? 0;
       return (
         <SectionGroup
           key={sectionKey}
@@ -132,23 +213,24 @@ function Main() {
           collapsed={collapsed}
           onToggle={() => toggleSection(activeProject.id, sectionKey)}
           cell={node.cell}
-          index={idx}
-          total={total}
+          index={sectionFlatIdx}
+          total={flatTotal}
           onReorder={(cid, dir) => void reorderCell(cid, dir)}
           onDelete={(cid) => void deleteCell(cid)}
           onChange={(cid, body) => void updateCell(cid, { body })}
         >
-          {(node.children || []).map((child, i) => renderNode(child, i, (node.children || []).length))}
+          {interleavedChildren}
         </SectionGroup>
       );
     }
     if (node.kind === "markdown" && node.cell) {
+      const fIdx = flatIndex.get(node.cell.id) ?? 0;
       return (
         <MarkdownCell
           key={node.key}
           cell={node.cell}
-          index={idx}
-          total={total}
+          index={fIdx}
+          total={flatTotal}
           onReorder={(cid, dir) => void reorderCell(cid, dir)}
           onDelete={(cid) => void deleteCell(cid)}
           onChange={(cid, body) => void updateCell(cid, { body })}
@@ -157,13 +239,14 @@ function Main() {
     }
     if (node.kind === "cell" && node.cell) {
       const cell = node.cell;
+      const fIdx = flatIndex.get(cell.id) ?? 0;
       if (cell.kind === "empty") {
         return (
           <EmptyCell
             key={node.key}
             cell={cell}
-            index={idx}
-            total={total}
+            index={fIdx}
+            total={flatTotal}
             onReorder={(cid, dir) => void reorderCell(cid, dir)}
             onDelete={(cid) => void deleteCell(cid)}
           />
@@ -173,8 +256,8 @@ function Main() {
         <Cell
           key={node.key}
           cell={cell}
-          index={idx}
-          total={total}
+          index={fIdx}
+          total={flatTotal}
           collapsed={!!(activeId && collapsedCells[activeId]?.[cell.id])}
           onToggleCollapse={() => activeId && toggleCell(activeId, cell.id)}
           onReorder={(cid, dir) => void reorderCell(cid, dir)}
@@ -256,38 +339,16 @@ function Main() {
               no cells in <strong>{filter === "all" ? "this view" : filter}</strong> right now.
             </div>
           )}
-          {visibleCells.length > 0 && (
-            <CellInserter
-              onAddMarkdown={() => void addMarkdownCell(activeProject.id, 0)}
-              onAddEmpty={() => void addEmptyCell(activeProject.id, 0)}
-              onAddSection={() => void addSectionCell(activeProject.id, 0)}
-            />
-          )}
-          {sections.map((node, i) => {
-            const out = renderNode(node, i, sections.length);
-            const inserter =
-              i < sections.length - 1 ? (
-                <CellInserter
-                  key={`${node.key}-ins`}
-                  onAddMarkdown={() => void addMarkdownCell(activeProject.id, i + 1)}
-                  onAddEmpty={() => void addEmptyCell(activeProject.id, i + 1)}
-                  onAddSection={() => void addSectionCell(activeProject.id, i + 1)}
-                />
-              ) : null;
-            return (
-              <span key={node.key}>
-                {out}
-                {inserter}
-              </span>
-            );
-          })}
-          {visibleCells.length > 0 && (
-            <CellInserter
-              onAddMarkdown={() => void addMarkdownCell(activeProject.id, cells.length)}
-              onAddEmpty={() => void addEmptyCell(activeProject.id, cells.length)}
-              onAddSection={() => void addSectionCell(activeProject.id, cells.length)}
-            />
-          )}
+          {insertAfter(null, "ins-top")}
+          {sections.map((node) => (
+            <Fragment key={node.key}>
+              {renderNode(node)}
+              {insertAfter(
+                lastCellIdBySectionKey.get(node.key) ?? lastCellId(node),
+                `ins-${node.key}`,
+              )}
+            </Fragment>
+          ))}
         </main>
       </div>
 

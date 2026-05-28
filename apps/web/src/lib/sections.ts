@@ -108,3 +108,14 @@ export function flattenSections(nodes: SectionNode[]): Cell[] {
   for (const n of nodes) walk(n);
   return out;
 }
+
+// Returns the id of the deepest right-most descendant cell of a subtree.
+// For a plain (non-section) node, returns its own cell id. For a section
+// with no children, returns the section's header cell id. Used by the
+// cell-inserter UI to anchor an "insert after this subtree" affordance.
+export function lastCellId(node: SectionNode): string {
+  if (node.kind === "section" && node.children && node.children.length > 0) {
+    return lastCellId(node.children[node.children.length - 1]);
+  }
+  return node.cell!.id;
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { inferSections } from "./sections";
+import { inferSections, lastCellId } from "./sections";
 import type { Cell } from "./types";
 
 function md(id: string, body: string, position: number): Cell {
@@ -108,5 +108,64 @@ describe("inferSections", () => {
     const k1 = inferSections(cells)[0].key;
     const k2 = inferSections(cells)[0].key;
     expect(k1).toBe(k2);
+  });
+});
+
+describe("lastCellId", () => {
+  it("plain cell node returns its own id", () => {
+    const tree = inferSections([agent("solo", 0)]);
+    expect(lastCellId(tree[0])).toBe("solo");
+  });
+
+  it("plain markdown node returns its own id", () => {
+    const tree = inferSections([md("note", "just prose", 0)]);
+    expect(lastCellId(tree[0])).toBe("note");
+  });
+
+  it("section with one direct child returns that child's id", () => {
+    const tree = inferSections([md("h", "## A", 0), agent("only", 1)]);
+    expect(lastCellId(tree[0])).toBe("only");
+  });
+
+  it("section with multiple children returns the last child's id", () => {
+    const tree = inferSections([
+      md("h", "## A", 0),
+      agent("first", 1),
+      agent("middle", 2),
+      agent("last", 3),
+    ]);
+    expect(lastCellId(tree[0])).toBe("last");
+  });
+
+  it("nested H1 > H2 > H3 with cells returns deepest right-most cell id", () => {
+    const tree = inferSections([
+      md("h1", "# outer", 0),
+      md("h2", "## middle", 1),
+      md("h3", "### inner", 2),
+      agent("leaf-a", 3),
+      agent("leaf-b", 4),
+    ]);
+    // tree[0] is the H1 section; its rightmost descendant is leaf-b inside
+    // the H3 inside the H2.
+    expect(lastCellId(tree[0])).toBe("leaf-b");
+  });
+
+  it("nested section: lastCellId of an inner section descends to its leaf", () => {
+    const tree = inferSections([
+      md("h2", "## outer", 0),
+      md("h3", "### inner", 1),
+      agent("x", 2),
+    ]);
+    // tree[0] is the H2; its only child is the H3 section; lastCellId of
+    // the H3 child is "x".
+    expect(lastCellId(tree[0].children![0])).toBe("x");
+    expect(lastCellId(tree[0])).toBe("x");
+  });
+
+  it("empty section (only header, no children) returns the header cell id", () => {
+    const tree = inferSections([md("h", "## empty", 0)]);
+    expect(tree[0].kind).toBe("section");
+    expect(tree[0].children).toHaveLength(0);
+    expect(lastCellId(tree[0])).toBe("h");
   });
 });

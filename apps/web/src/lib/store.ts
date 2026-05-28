@@ -89,6 +89,12 @@ interface StoreState {
   addMarkdownCell: (pid: string, atIndex: number) => Promise<void>;
   addEmptyCell: (pid: string, atIndex: number) => Promise<void>;
   addSectionCell: (pid: string, atIndex: number) => Promise<void>;
+  // Anchor-based variants: pass the id of the cell to insert AFTER, or null
+  // to insert at the top of the list. Used by the in-tree CellInserter so we
+  // don't have to translate tree-space gap indices into flat-array indices.
+  addMarkdownCellAfter: (pid: string, afterCellId: string | null) => Promise<void>;
+  addEmptyCellAfter: (pid: string, afterCellId: string | null) => Promise<void>;
+  addSectionCellAfter: (pid: string, afterCellId: string | null) => Promise<void>;
 
   toggleSection: (pid: string, key: string) => void;
   isSectionCollapsed: (pid: string, key: string) => boolean;
@@ -347,6 +353,17 @@ export const useStore = create<StoreState>((set, get) => ({
     // even though the heading text is empty — SectionGroup starts in edit mode
     // when the heading text is effectively empty.
     await get().createCell(pid, { kind: "markdown" as CellKind, after_cell_id: after, body: "## " });
+  },
+
+  addMarkdownCellAfter: async (pid, afterCellId) => {
+    await get().createCell(pid, { kind: "markdown" as CellKind, after_cell_id: afterCellId, body: "" });
+  },
+  addEmptyCellAfter: async (pid, afterCellId) => {
+    await get().createCell(pid, { kind: "empty" as CellKind, after_cell_id: afterCellId });
+  },
+  addSectionCellAfter: async (pid, afterCellId) => {
+    // Same "## " seed as addSectionCell; see comment there.
+    await get().createCell(pid, { kind: "markdown" as CellKind, after_cell_id: afterCellId, body: "## " });
   },
 
   toggleSection: (pid, key) => {
