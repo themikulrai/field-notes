@@ -40,8 +40,6 @@ export function Cell({
   const status = cell.status || "open";
   const s = STATUSES[status];
   const locked = !!cell.locked;
-  const stale =
-    !!cell.verdict && new Date(cell.updated_at) > new Date(cell.verdict.at);
 
   const toggleCollapse = onToggleCollapse ?? (() => {});
   const handleHeadKey = (e: KeyboardEvent) => {
@@ -70,13 +68,6 @@ export function Cell({
           <div className="cell-meta">
             <StatusBadge status={status} />
             {locked && <span className="locked-chip">LOCKED</span>}
-            {stale && (
-              <span
-                className="verdict-stale-pip"
-                title="cell edited after verdict — please re-review"
-                aria-label="stale verdict"
-              />
-            )}
             <span className="mono dim sep">·</span>
             <span className="mono dim">{cell.agent_id || "agent"}</span>
             <span className="mono dim sep">·</span>

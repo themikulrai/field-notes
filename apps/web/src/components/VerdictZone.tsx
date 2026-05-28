@@ -18,7 +18,6 @@ export function VerdictZone({ cell, onVerdict, onUnlock }: Props) {
   const has = !!v;
   const state = v?.state ?? null;
   const hasDraft = draft.trim().length > 0;
-  const stale = !!v && new Date(cell.updated_at) > new Date(v.at);
 
   const commit = (next: VerdictState) => {
     onVerdict(next === state ? null : next, draft);
@@ -30,14 +29,6 @@ export function VerdictZone({ cell, onVerdict, onUnlock }: Props) {
         <div className="verdict-tag">
           <span className="verdict-tag-label">HUMAN</span>
           <span className="locked-chip">LOCKED</span>
-          {stale && (
-            <span
-              className="verdict-stale-chip"
-              title="cell edited after verdict — please re-review"
-            >
-              STALE
-            </span>
-          )}
           {has && <span className="verdict-tag-time mono">{fmtAgo(v!.at)}</span>}
         </div>
         <div className="verdict-body">
@@ -62,14 +53,6 @@ export function VerdictZone({ cell, onVerdict, onUnlock }: Props) {
     <div className={`verdict ${has ? `verdict--${state}` : "verdict--empty"}`}>
       <div className="verdict-tag">
         <span className="verdict-tag-label">HUMAN</span>
-        {stale && (
-          <span
-            className="verdict-stale-chip"
-            title="cell edited after verdict — please re-review"
-          >
-            STALE
-          </span>
-        )}
         {has && <span className="verdict-tag-time mono">{fmtAgo(v!.at)}</span>}
       </div>
       <div className="verdict-body">

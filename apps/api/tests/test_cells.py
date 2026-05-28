@@ -399,3 +399,104 @@ async def test_append_finalize_sets_status_ready(client, project_id) -> None:
     assert out["visual"]["html"] == "<p>done</p>"
     # _chunks cleared on finalize
     assert "_chunks" not in out["visual"]
+
+
+# ---------- MCP source pins cell status to "open" ----------
+#
+# Server-side invariant: any write with X-Field-Notes-Source: mcp forces
+# `status = "open"` regardless of payload. http-sourced writes are unchanged.
+
+
+async def test_create_mcp_forces_status_open_overriding_body(client, project_id) -> None:
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "A", "status": "verified"},
+        headers={"X-Field-Notes-Source": "mcp"},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["status"] == "open"
+
+
+async def test_create_mcp_forces_status_open_when_unset(client, project_id) -> None:
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "A"},
+        headers={"X-Field-Notes-Source": "mcp"},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["status"] == "open"
+
+
+async def test_create_http_status_passes_through(client, project_id) -> None:
+    # No header → defaults to http; status from body wins.
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "A", "status": "verified"},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["status"] == "verified"
+    # Explicit http header behaves the same.
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "B", "status": "rejected"},
+        headers={"X-Field-Notes-Source": "http"},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["status"] == "rejected"
+
+
+async def test_patch_mcp_status_forced_open_even_when_body_says_verified(
+    client, project_id
+) -> None:
+    # Seed cell + verdict (so we can confirm verdict relationship is untouched).
+    c = await _create_cell(client, project_id, title="A")
+    vr = await client.post(f"/cells/{c['id']}/verdict", json={"state": "accept", "note": "ok"})
+    assert vr.status_code == 200, vr.text
+    assert vr.json()["status"] == "verified"
+    assert vr.json()["verdict"]["state"] == "accept"
+
+    # Agent edit via MCP — request says status=verified, server must force "open".
+    r = await client.patch(
+        f"/cells/{c['id']}",
+        json={"status": "verified"},
+        headers={"X-Field-Notes-Source": "mcp"},
+    )
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["status"] == "open"
+    # Verdict row untouched — only cell.status flipped.
+    assert out["verdict"] is not None
+    assert out["verdict"]["state"] == "accept"
+    assert out["verdict"]["note"] == "ok"
+
+
+async def test_patch_mcp_no_status_in_body_still_reopens(client, project_id) -> None:
+    c = await _create_cell(client, project_id, title="A", status="verified")
+    assert c["status"] == "verified"
+    # Touching only `conclusion` via MCP must still flip status -> open.
+    r = await client.patch(
+        f"/cells/{c['id']}",
+        json={"conclusion": "redo"},
+        headers={"X-Field-Notes-Source": "mcp"},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "open"
+    assert r.json()["conclusion"] == "redo"
+
+
+async def test_patch_http_status_passes_through(client, project_id) -> None:
+    c = await _create_cell(client, project_id, title="A")
+    r = await client.patch(
+        f"/cells/{c['id']}",
+        json={"status": "verified"},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "verified"
+    # And with explicit http header.
+    r = await client.patch(
+        f"/cells/{c['id']}",
+        json={"status": "rejected"},
+        headers={"X-Field-Notes-Source": "http"},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "rejected"

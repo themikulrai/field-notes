@@ -134,8 +134,13 @@ async def create_cell(
         insert_at = idx + 1
 
     # Default status for empty cells; agent status passes through.
+    # MCP-sourced writes are server-pinned to "open" — any agent edit re-opens
+    # the cell, regardless of what `body.status` (or kind) wanted. This is the
+    # invariant; cell status reflects review state, not agent self-reporting.
     status_value: str | None
-    if body.kind == CellKind.empty:
+    if _source(request) == "mcp":
+        status_value = CellStatus.open.value
+    elif body.kind == CellKind.empty:
         status_value = CellStatus.open.value
     else:
         status_value = body.status.value if body.status is not None else None
@@ -228,6 +233,12 @@ async def update_cell(
             c.status = v.value if hasattr(v, "value") else v
         else:
             setattr(c, k, v)
+    # Server-side invariant: any MCP-sourced edit re-opens the cell. Applies
+    # after all field merges so it overrides any explicit `status` in the patch
+    # as well as any "no status field at all" case. Verdict relationship is
+    # intentionally untouched — only the cell's own status flips.
+    if _source(request) == "mcp":
+        c.status = CellStatus.open.value
     await session.flush()
     env = await emit_event(
         session,
