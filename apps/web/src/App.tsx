@@ -44,6 +44,8 @@ function Main() {
   const setVerdict = useStore((s) => s.setVerdict);
   const unlockCell = useStore((s) => s.unlockCell);
   const reorderCell = useStore((s) => s.reorderCell);
+  const collapsedCells = useStore((s) => s.collapsedCells);
+  const toggleCell = useStore((s) => s.toggleCell);
   const deleteCell = useStore((s) => s.deleteCell);
   const updateCell = useStore((s) => s.updateCell);
   const addMarkdownCell = useStore((s) => s.addMarkdownCell);
@@ -173,6 +175,8 @@ function Main() {
           cell={cell}
           index={idx}
           total={total}
+          collapsed={!!(activeId && collapsedCells[activeId]?.[cell.id])}
+          onToggleCollapse={() => activeId && toggleCell(activeId, cell.id)}
           onReorder={(cid, dir) => void reorderCell(cid, dir)}
           onVerdict={(cid, state, note) => void setVerdict(cid, state, note)}
           onUnlock={(cid) => void unlockCell(cid)}

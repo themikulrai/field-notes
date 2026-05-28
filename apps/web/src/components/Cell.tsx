@@ -3,7 +3,7 @@
 // + a LOCKED chip in the meta row.
 
 import { useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 import type { Cell as CellData, VerdictState } from "../lib/types";
 import { STATUSES, fmtAgo } from "../lib/format";
 import { StatusBadge } from "./StatusBadge";
@@ -17,13 +17,25 @@ interface Props {
   cell: CellData;
   index: number;
   total: number;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   onReorder: (cid: string, dir: "up" | "down") => void;
   onVerdict: (cid: string, state: VerdictState | null, note: string) => void;
   onUnlock: (cid: string) => void;
   onDelete: (cid: string) => void;
 }
 
-export function Cell({ cell, index, total, onReorder, onVerdict, onUnlock, onDelete }: Props) {
+export function Cell({
+  cell,
+  index,
+  total,
+  collapsed = false,
+  onToggleCollapse,
+  onReorder,
+  onVerdict,
+  onUnlock,
+  onDelete,
+}: Props) {
   const [open, setOpen] = useState(false);
   const status = cell.status || "open";
   const s = STATUSES[status];
@@ -31,15 +43,30 @@ export function Cell({ cell, index, total, onReorder, onVerdict, onUnlock, onDel
   const stale =
     !!cell.verdict && new Date(cell.updated_at) > new Date(cell.verdict.at);
 
+  const toggleCollapse = onToggleCollapse ?? (() => {});
+  const handleHeadKey = (e: KeyboardEvent) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    toggleCollapse();
+  };
+
   return (
     <article
-      className={`cell cell--${status} ${locked ? "cell--locked" : ""}`}
+      className={`cell cell--${status} ${locked ? "cell--locked" : ""} ${collapsed ? "cell--collapsed" : ""}`}
       style={{ ["--rail" as string]: s.rail, ["--rail-bg" as string]: s.bg } as CSSProperties}
       data-screen-label={`cell-${index + 1}`}
     >
       <div className="rail" aria-hidden="true" />
       <header className="cell-head">
-        <div className="cell-head-left">
+        <div
+          className="cell-head-left cell-head-toggle"
+          role="button"
+          tabIndex={0}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "expand cell" : "collapse cell"}
+          onClick={toggleCollapse}
+          onKeyDown={handleHeadKey}
+        >
           <div className="cell-meta">
             <StatusBadge status={status} />
             {locked && <span className="locked-chip">LOCKED</span>}
@@ -55,7 +82,12 @@ export function Cell({ cell, index, total, onReorder, onVerdict, onUnlock, onDel
             <span className="mono dim sep">·</span>
             <span className="mono dim">updated {fmtAgo(cell.updated_at)}</span>
           </div>
-          <h2 className="cell-title">{cell.title || "untitled"}</h2>
+          <h2 className="cell-title">
+            <span className="cell-collapse-chevron" aria-hidden="true">
+              {collapsed ? "▸" : "▾"}
+            </span>
+            {cell.title || "untitled"}
+          </h2>
         </div>
         <div className="cell-head-right">
           <div className="reorder">
@@ -117,65 +149,69 @@ export function Cell({ cell, index, total, onReorder, onVerdict, onUnlock, onDel
         </div>
       </header>
 
-      <div className="agent-block">
-        <div className="agent-rail" aria-hidden="true">
-          <span className="agent-rail-label mono">agent</span>
-        </div>
-        <div className="agent-content">
-          {cell.conclusion && <p className="conclusion">{cell.conclusion}</p>}
-          {(cell.metrics || cell.visual || cell.video) && (
-            <div className="outputs">
-              {cell.metrics && cell.metrics.length > 0 && <MetricRow items={cell.metrics} />}
-              {cell.visual && (
-                <div className="chart-wrap">
-                  <Sparkline visual={cell.visual} />
+      {!collapsed && (
+        <>
+          <div className="agent-block">
+            <div className="agent-rail" aria-hidden="true">
+              <span className="agent-rail-label mono">agent</span>
+            </div>
+            <div className="agent-content">
+              {cell.conclusion && <p className="conclusion">{cell.conclusion}</p>}
+              {(cell.metrics || cell.visual || cell.video) && (
+                <div className="outputs">
+                  {cell.metrics && cell.metrics.length > 0 && <MetricRow items={cell.metrics} />}
+                  {cell.visual && (
+                    <div className="chart-wrap">
+                      <Sparkline visual={cell.visual} />
+                    </div>
+                  )}
+                  {cell.video && <VideoSlot video={cell.video} />}
                 </div>
               )}
-              {cell.video && <VideoSlot video={cell.video} />}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <VerdictZone
-        cell={cell}
-        onVerdict={(state, note) => onVerdict(cell.id, state, note)}
-        onUnlock={() => onUnlock(cell.id)}
-      />
+          <VerdictZone
+            cell={cell}
+            onVerdict={(state, note) => onVerdict(cell.id, state, note)}
+            onUnlock={() => onUnlock(cell.id)}
+          />
 
-      <button
-        className={`deep-toggle ${open ? "is-open" : ""}`}
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
-        <span className="deep-toggle-line" aria-hidden="true" />
-        <span className="deep-toggle-label mono">
-          <svg
-            viewBox="0 0 12 12"
-            width="10"
-            height="10"
-            aria-hidden="true"
-            style={{
-              transform: open ? "rotate(90deg)" : "none",
-              transition: "transform 160ms",
-            }}
+          <button
+            className={`deep-toggle ${open ? "is-open" : ""}`}
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
           >
-            <path
-              d="M4 2l4 4-4 4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {open ? "hide details" : "show hyperparameters, files, runs, logs"}
-        </span>
-        <span className="deep-toggle-line" aria-hidden="true" />
-      </button>
+            <span className="deep-toggle-line" aria-hidden="true" />
+            <span className="deep-toggle-label mono">
+              <svg
+                viewBox="0 0 12 12"
+                width="10"
+                height="10"
+                aria-hidden="true"
+                style={{
+                  transform: open ? "rotate(90deg)" : "none",
+                  transition: "transform 160ms",
+                }}
+              >
+                <path
+                  d="M4 2l4 4-4 4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {open ? "hide details" : "show hyperparameters, files, runs, logs"}
+            </span>
+            <span className="deep-toggle-line" aria-hidden="true" />
+          </button>
 
-      {open && cell.deep && <DeepLayer deep={cell.deep} />}
+          {open && cell.deep && <DeepLayer deep={cell.deep} />}
+        </>
+      )}
     </article>
   );
 }

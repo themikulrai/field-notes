@@ -98,4 +98,42 @@ describe("Cell", () => {
     expect(screen.getByText("verify with comment")).toBeInTheDocument();
     expect(screen.getByText("reject with comment")).toBeInTheDocument();
   });
+
+  it("when collapsed, hides conclusion + metrics; clicking header toggles", () => {
+    const toggle = vi.fn();
+    const { rerender } = render(
+      <Cell
+        cell={mkCell()}
+        index={0}
+        total={1}
+        collapsed
+        onToggleCollapse={toggle}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("run 4")).toBeInTheDocument();
+    expect(screen.queryByText("Run 4 looks good.")).not.toBeInTheDocument();
+    expect(screen.queryByText("0.74")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("expand cell"));
+    expect(toggle).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <Cell
+        cell={mkCell()}
+        index={0}
+        total={1}
+        collapsed={false}
+        onToggleCollapse={toggle}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Run 4 looks good.")).toBeInTheDocument();
+  });
 });

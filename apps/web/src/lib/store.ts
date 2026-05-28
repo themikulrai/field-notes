@@ -18,6 +18,7 @@ import type {
 type Filter = "all" | CellStatus;
 
 const COLLAPSE_KEY = "field-notes-collapsed";
+const COLLAPSED_CELLS_KEY = "field-notes-collapsed-cells";
 
 function loadCollapsed(): Record<string, Record<string, boolean>> {
   try {
@@ -37,12 +38,31 @@ function saveCollapsed(c: Record<string, Record<string, boolean>>) {
   }
 }
 
+function loadCollapsedCells(): Record<string, Record<string, boolean>> {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(COLLAPSED_CELLS_KEY) : null;
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
+function saveCollapsedCells(c: Record<string, Record<string, boolean>>) {
+  try {
+    localStorage.setItem(COLLAPSED_CELLS_KEY, JSON.stringify(c));
+  } catch {
+    /* ignore */
+  }
+}
+
 interface StoreState {
   projects: Project[];
   activeProjectId: string | null;
   cellsByProject: Record<string, Cell[]>;
   filter: Filter;
   collapsedSections: Record<string, Record<string, boolean>>;
+  collapsedCells: Record<string, Record<string, boolean>>;
   loading: boolean;
   error: string | null;
 
@@ -72,6 +92,8 @@ interface StoreState {
 
   toggleSection: (pid: string, key: string) => void;
   isSectionCollapsed: (pid: string, key: string) => boolean;
+  toggleCell: (pid: string, cid: string) => void;
+  isCellCollapsed: (pid: string, cid: string) => boolean;
 
   // Live-event hooks
   applyEvent: (env: {
@@ -116,6 +138,7 @@ export const useStore = create<StoreState>((set, get) => ({
   cellsByProject: {},
   filter: "all",
   collapsedSections: loadCollapsed(),
+  collapsedCells: loadCollapsedCells(),
   loading: false,
   error: null,
 
@@ -338,6 +361,20 @@ export const useStore = create<StoreState>((set, get) => ({
   isSectionCollapsed: (pid, key) => {
     const cur = get().collapsedSections[pid];
     return !!cur?.[key];
+  },
+
+  toggleCell: (pid, cid) => {
+    set((s) => {
+      const cur = s.collapsedCells[pid] || {};
+      const nextProj = { ...cur, [cid]: !cur[cid] };
+      const next = { ...s.collapsedCells, [pid]: nextProj };
+      saveCollapsedCells(next);
+      return { collapsedCells: next };
+    });
+  },
+  isCellCollapsed: (pid, cid) => {
+    const cur = get().collapsedCells[pid];
+    return !!cur?.[cid];
   },
 
   applyEvent: async (env) => {

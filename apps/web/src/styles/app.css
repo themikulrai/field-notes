@@ -288,6 +288,20 @@
   .cell-meta .sep { color: var(--ink-4); }
   .cell-title { font-size: 20px; font-weight: 500; margin: 0; letter-spacing: -0.01em; line-height: 1.25; color: var(--ink); }
   .cell-title.dim { color: var(--ink-3); font-style: italic; font-weight: 400; }
+  .cell-head-toggle { cursor: pointer; user-select: none; border-radius: 6px; outline: none; }
+  .cell-head-toggle:focus-visible { box-shadow: 0 0 0 2px var(--ink); }
+  .cell-collapse-chevron {
+    display: inline-block;
+    width: 14px;
+    margin-right: 6px;
+    color: var(--ink-3);
+    font-size: 12px;
+    vertical-align: 1px;
+    transition: color 120ms;
+  }
+  .cell-head-toggle:hover .cell-collapse-chevron { color: var(--ink); }
+  .cell--collapsed .cell-head { margin-bottom: 0; }
+  .cell--collapsed { padding-top: 16px; padding-bottom: 16px; }
   .cell-head-right { display: flex; gap: 4px; align-items: center; }
   .reorder { display: flex; border: 1px solid var(--rule-2); border-radius: 6px; overflow: hidden; }
   .reorder .icon-btn { border: none; border-radius: 0; }
