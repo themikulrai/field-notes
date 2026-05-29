@@ -99,6 +99,28 @@ describe("Cell", () => {
     expect(screen.getByText("reject with comment")).toBeInTheDocument();
   });
 
+  it("renders an unknown/deprecated status (e.g. 'ready') without throwing", () => {
+    // Regression: STATUSES had no 'ready' key, so STATUSES['ready'].rail threw
+    // and white-screened the whole app. statusMeta() now falls back to 'open'.
+    const cell = mkCell({ status: "ready" as unknown as CellData["status"] });
+    expect(() =>
+      render(
+        <Cell
+          cell={cell}
+          index={0}
+          total={1}
+          onReorder={vi.fn()}
+          onVerdict={vi.fn()}
+          onUnlock={vi.fn()}
+          onDelete={vi.fn()}
+        />,
+      ),
+    ).not.toThrow();
+    // degrades to the "open" (needs-review) presentation
+    expect(screen.getByText("run 4")).toBeInTheDocument();
+    expect(screen.getByLabelText("status: open")).toBeInTheDocument();
+  });
+
   it("when collapsed, hides conclusion + metrics; clicking header toggles", () => {
     const toggle = vi.fn();
     const { rerender } = render(

@@ -48,3 +48,17 @@ export const STATUSES = {
 } as const;
 
 export const STATUS_ORDER = ["in_progress", "open", "verified", "rejected"] as const;
+
+export type StatusMeta = (typeof STATUSES)[keyof typeof STATUSES];
+
+// Resolve a cell's status to its display metadata, tolerating any value the
+// backend might send that this build doesn't know about (e.g. the deprecated
+// "ready", or a future status added server-side before the web app catches
+// up). Returns the "open" style as a safe default so an unknown status renders
+// as "needs review" instead of throwing and white-screening the whole app.
+export function statusMeta(status: string | null | undefined): StatusMeta {
+  if (status && Object.prototype.hasOwnProperty.call(STATUSES, status)) {
+    return STATUSES[status as keyof typeof STATUSES];
+  }
+  return STATUSES.open;
+}

@@ -5,7 +5,7 @@
 import { useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { Cell as CellData, VerdictState } from "../lib/types";
-import { STATUSES, fmtAgo } from "../lib/format";
+import { statusMeta, fmtAgo } from "../lib/format";
 import { StatusBadge } from "./StatusBadge";
 import { MetricRow } from "./MetricRow";
 import { VideoSlot } from "./VideoSlot";
@@ -38,7 +38,7 @@ export function Cell({
 }: Props) {
   const [open, setOpen] = useState(false);
   const status = cell.status || "open";
-  const s = STATUSES[status];
+  const s = statusMeta(status);
   const locked = !!cell.locked;
 
   const toggleCollapse = onToggleCollapse ?? (() => {});
