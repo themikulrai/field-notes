@@ -387,7 +387,9 @@ async def test_append_rejects_kind_change(client, project_id) -> None:
     assert "non-sandbox" in r.json()["detail"]
 
 
-async def test_append_finalize_sets_status_ready(client, project_id) -> None:
+async def test_append_finalize_sets_status_open(client, project_id) -> None:
+    # finalize is a content write, so it must route the cell to "open" (review
+    # queue) — NOT the deprecated "ready", which the web UI cannot render.
     c = await _create_cell(client, project_id, title="A")
     r = await client.post(
         f"/cells/{c['id']}/visual-sandbox/append",
@@ -395,10 +397,27 @@ async def test_append_finalize_sets_status_ready(client, project_id) -> None:
     )
     assert r.status_code == 200, r.text
     out = r.json()
-    assert out["status"] == "ready"
+    assert out["status"] == "open"
+    assert out["status"] != "ready"
     assert out["visual"]["html"] == "<p>done</p>"
     # _chunks cleared on finalize
     assert "_chunks" not in out["visual"]
+
+
+async def test_append_finalize_on_verified_cell_returns_to_open(client, project_id) -> None:
+    # Regression: re-finalizing a sandbox on an already-verified cell used to
+    # clobber status to "ready", desyncing it from the accept verdict and
+    # silently skipping re-review. It must come back to "open" like any edit.
+    c = await _create_cell(client, project_id, title="V")
+    rv = await client.post(f"/cells/{c['id']}/verdict", json={"state": "accept", "note": "lgtm"})
+    assert rv.status_code == 200, rv.text
+    assert rv.json()["status"] == "verified"
+    r = await client.post(
+        f"/cells/{c['id']}/visual-sandbox/append",
+        json={"target": "js", "chunk": "console.log(1)", "seq": 0, "finalize": True},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "open"
 
 
 # ---------- MCP source pins cell status to "open" ----------

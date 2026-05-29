@@ -22,9 +22,12 @@ class CellStatus(str, Enum):
     open = "open"
     verified = "verified"
     rejected = "rejected"
-    # `ready` is used by the append_visual_sandbox endpoint to signal that
-    # a chunked sandbox build has been finalized. It is distinct from
-    # `verified` (which is a human verdict).
+    # DEPRECATED. `ready` was once set by append_visual_sandbox(finalize=True)
+    # to signal a finalized chunked build, but no code ever consumed it and the
+    # web UI never rendered it (it white-screened the project — see migration
+    # 0004). finalize now sets "open" like every other content write. The value
+    # is retained only so the DB CHECK constraint stays valid and any legacy
+    # rows remain loadable; nothing emits it. Do not use for new code.
     ready = "ready"
 
 

@@ -318,7 +318,12 @@ async def append_visual_sandbox(
     agent builds large sandboxes in pieces. `seq` MUST equal the current count
     of chunks already appended for that target (so the first append for a
     target uses seq=0). The counter lives in `c.visual["_chunks"]` and is
-    cleared on `finalize=True`, which also flips status→"ready".
+    cleared on `finalize=True`, which also flips status→"open" so the finished
+    cell re-enters the review queue — the same invariant every other content
+    write obeys (see `create_cell`/`update_cell`): agent writes never
+    self-report a review state. (Historically finalize set status="ready", a
+    value the web UI never learned to render; it white-screened the whole
+    project. See migration 0004 and the `statusMeta` fallback in the web app.)
     """
     c = await session.get(Cell, cid)
     if c is None:
@@ -363,7 +368,11 @@ async def append_visual_sandbox(
 
     if body.finalize:
         new_visual.pop("_chunks", None)
-        c.status = CellStatus.ready.value
+        # A finalized sandbox is a content write like any other: route it back
+        # to "open" (needs review), never the deprecated agent-self-reported
+        # "ready". This keeps status/verdict in sync and the cell visible in
+        # the review queue.
+        c.status = CellStatus.open.value
 
     c.visual = new_visual
     await session.flush()
