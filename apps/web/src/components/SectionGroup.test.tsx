@@ -246,4 +246,221 @@ describe("SectionGroup", () => {
     const ta = screen.getByRole("textbox") as HTMLTextAreaElement;
     expect(ta.value).toBe("## ");
   });
+
+  // ---- body-below-heading rendering (fix/section-body-render) ----
+
+  it("renders the body below the heading, including markdown (bold, bullet list, em dash)", () => {
+    const { container } = render(
+      <SectionGroup
+        level={2}
+        heading="Vanilla Policy"
+        collapsed={false}
+        onToggle={vi.fn()}
+        cell={mkCell(
+          "## Vanilla Policy\n\nThis is **bold** prose — with an em dash.\n\n- first bullet\n- second bullet",
+        )}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      >
+        <div>child</div>
+      </SectionGroup>,
+    );
+    const body = container.querySelector(".section-body");
+    expect(body).not.toBeNull();
+    // prose text present
+    expect(body!.textContent).toContain("This is");
+    expect(body!.textContent).toContain("with an em dash.");
+    // markdown rendered to HTML
+    expect(body!.querySelector("strong")?.textContent).toBe("bold");
+    const items = body!.querySelectorAll("li");
+    expect(items.length).toBe(2);
+    expect(items[0].textContent).toBe("first bullet");
+    expect(items[1].textContent).toBe("second bullet");
+    // heading is NOT duplicated inside the body (only the <h2> from <Head>)
+    expect(body!.querySelector("h1, h2, h3, h4")).toBeNull();
+    expect(body!.textContent).not.toContain("Vanilla Policy");
+  });
+
+  it("does NOT show body text when collapsed", () => {
+    const { container } = render(
+      <SectionGroup
+        level={2}
+        heading="Intro"
+        collapsed={true}
+        onToggle={vi.fn()}
+        cell={mkCell("## Intro\n\nhidden body prose here")}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      >
+        <div data-testid="child">child</div>
+      </SectionGroup>,
+    );
+    expect(container.querySelector(".section-body")).toBeNull();
+    expect(screen.queryByText(/hidden body prose here/)).toBeNull();
+  });
+
+  it("renders no non-empty .section-body for a heading-only body", () => {
+    const { container } = render(
+      <SectionGroup
+        level={1}
+        heading="Title"
+        collapsed={false}
+        onToggle={vi.fn()}
+        cell={mkCell("# Title")}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      >
+        <div>child</div>
+      </SectionGroup>,
+    );
+    // no body div at all (guard is `!editing && belowHtml`)
+    expect(container.querySelector(".section-body")).toBeNull();
+  });
+
+  it("level-4 heading body strips the #### line (no duplicate heading in body)", () => {
+    const { container } = render(
+      <SectionGroup
+        level={3}
+        heading="Deep"
+        collapsed={false}
+        onToggle={vi.fn()}
+        cell={mkCell("#### Deep\n\ndeep prose")}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      >
+        <div>child</div>
+      </SectionGroup>,
+    );
+    const body = container.querySelector(".section-body");
+    expect(body).not.toBeNull();
+    expect(body!.textContent).toContain("deep prose");
+    // the #### line must be stripped positionally, not re-rendered as <h4>
+    expect(body!.querySelector("h1, h2, h3, h4")).toBeNull();
+    expect(body!.textContent).not.toContain("Deep");
+  });
+
+  it("strips correctly with leading blank lines before the heading", () => {
+    const { container } = render(
+      <SectionGroup
+        level={2}
+        heading="T"
+        collapsed={false}
+        onToggle={vi.fn()}
+        cell={mkCell("\n\n## T\nbody after blanks")}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      >
+        <div>child</div>
+      </SectionGroup>,
+    );
+    const body = container.querySelector(".section-body");
+    expect(body).not.toBeNull();
+    expect(body!.textContent).toContain("body after blanks");
+    expect(body!.querySelector("h1, h2, h3, h4")).toBeNull();
+  });
+
+  it("handles CRLF line endings", () => {
+    const { container } = render(
+      <SectionGroup
+        level={2}
+        heading="T"
+        collapsed={false}
+        onToggle={vi.fn()}
+        cell={mkCell("## T\r\n\r\nprose crlf\r\n")}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      >
+        <div>child</div>
+      </SectionGroup>,
+    );
+    const body = container.querySelector(".section-body");
+    expect(body).not.toBeNull();
+    expect(body!.textContent).toContain("prose crlf");
+    expect(body!.querySelector("h1, h2, h3, h4")).toBeNull();
+  });
+
+  it("renders body BEFORE children when a section has both", () => {
+    const { container } = render(
+      <SectionGroup
+        level={2}
+        heading="Intro"
+        collapsed={false}
+        onToggle={vi.fn()}
+        cell={mkCell("## Intro\n\nintro body text")}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      >
+        <div data-testid="child">child</div>
+      </SectionGroup>,
+    );
+    const body = container.querySelector(".section-body");
+    const children = container.querySelector(".section-children");
+    expect(body).not.toBeNull();
+    expect(children).not.toBeNull();
+    // .section-body must precede .section-children in DOM order
+    expect(
+      body!.compareDocumentPosition(children!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("clicking the body enters edit mode (when onChange provided) and does NOT toggle collapse", () => {
+    const onToggle = vi.fn();
+    const onChange = vi.fn();
+    const { container } = render(
+      <SectionGroup
+        level={2}
+        heading="Intro"
+        collapsed={false}
+        onToggle={onToggle}
+        cell={mkCell("## Intro\n\nclickable body")}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={onChange}
+      >
+        <div>child</div>
+      </SectionGroup>,
+    );
+    const body = container.querySelector(".section-body") as HTMLElement;
+    expect(body).not.toBeNull();
+    fireEvent.click(body);
+    // edit mode -> textarea now visible with full body (heading + prose)
+    const ta = screen.getByRole("textbox") as HTMLTextAreaElement;
+    expect(ta.value).toBe("## Intro\n\nclickable body");
+    // body div is gone, collapse not toggled
+    expect(container.querySelector(".section-body")).toBeNull();
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it("caret-only call site (no cell/onChange) does not render an editable body", () => {
+    const { container } = render(
+      <SectionGroup level={2} heading="Intro" collapsed={false} onToggle={vi.fn()}>
+        <div>child</div>
+      </SectionGroup>,
+    );
+    // No cell/onChange -> no body div at all.
+    expect(container.querySelector(".section-body")).toBeNull();
+  });
 });

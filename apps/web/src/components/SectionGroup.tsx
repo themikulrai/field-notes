@@ -4,6 +4,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import type { Cell } from "../lib/types";
+import { renderMarkdown } from "../lib/markdown";
 
 interface Props {
   level: 1 | 2 | 3;
@@ -28,6 +29,23 @@ function isHeadingBodyEmpty(body: string | null | undefined): boolean {
   if (!body) return true;
   const t = body.trim();
   return t === "#" || t === "##" || t === "###";
+}
+
+// Returns the prose that lives *under* the heading line of a section cell.
+// Mirrors sections.ts: the heading is the FIRST non-blank line (whatever its
+// `#` count / indentation), so we drop that line POSITIONALLY — never by a
+// fixed prefix match — then return the remainder trimmed. CRLF is normalized
+// so a trailing \r never leaks into the rendered HTML. Returns "" when there
+// is no body below the heading.
+function bodyBelowHeading(body: string | null | undefined): string {
+  if (!body) return "";
+  const lines = body.replace(/\r\n?/g, "\n").split("\n");
+  let i = 0;
+  // Skip leading blank lines (same emptiness test as sections.ts).
+  while (i < lines.length && lines[i].trim() === "") i++;
+  // Drop the heading line itself (the first non-blank line).
+  i++;
+  return lines.slice(i).join("\n").trim();
 }
 
 export function SectionGroup({
@@ -75,6 +93,12 @@ export function SectionGroup({
   };
 
   const canManage = !!cell && !!onChange && !!onDelete && !!onReorder && index !== undefined && total !== undefined;
+
+  // Prose that appears under the heading line of this section cell. Recomputed
+  // each render so it always tracks the current cell.body (cheap for one cell).
+  // Only meaningful when this section is editable (cell + onChange present);
+  // caret-only call sites get no body affordance.
+  const belowHtml = cell && onChange ? renderMarkdown(bodyBelowHeading(cell.body)) : "";
 
   return (
     <section
@@ -216,7 +240,21 @@ export function SectionGroup({
           </div>
         )}
       </header>
-      {!collapsed && <div className="section-children">{children}</div>}
+      {!collapsed && (
+        <>
+          {!editing && belowHtml && (
+            <div
+              className="md-rendered section-body"
+              dangerouslySetInnerHTML={{ __html: belowHtml }}
+              onClick={() => {
+                if (cell && onChange) setEditing(true);
+              }}
+              title="click to edit"
+            />
+          )}
+          <div className="section-children">{children}</div>
+        </>
+      )}
     </section>
   );
 }
