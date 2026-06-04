@@ -36,3 +36,6 @@ apps/web/dist/
 
 # always-on runtime state (pgdata, api.pid, api.log)
 data/
+
+# LiftBarrier videos are fetched from HF at Docker build time, not committed
+apps/api/media/

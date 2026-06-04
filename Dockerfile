@@ -23,6 +23,18 @@ RUN pip install --no-cache-dir uv==0.5.* \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
+
+# ---------- LiftBarrier eval/input videos (served at /media) ----------
+# Hosted on a HuggingFace dataset (kept out of git to avoid bloating history)
+# and baked into the image here so they survive Heroku dyno restarts — the dyno
+# filesystem is ephemeral, so anything not in the image is lost on reboot. The
+# later `COPY apps/api/` overlays source on top without deleting this media dir.
+# Placed early for layer caching: only re-downloads if this URL changes.
+ARG LIFTBARRIER_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/liftbarrier_media.tar.gz
+RUN mkdir -p /repo/apps/api/media \
+    && curl -fsSL "$LIFTBARRIER_MEDIA_URL" | tar -xz -C /repo/apps/api/media
+ENV FIELD_NOTES_MEDIA_DIR=/repo/apps/api/media
+
 COPY pyproject.toml uv.lock ./
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
