@@ -33,6 +33,10 @@ WORKDIR /repo
 ARG LIFTBARRIER_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/liftbarrier_media.tar.gz
 RUN mkdir -p /repo/apps/api/media \
     && curl -fsSL "$LIFTBARRIER_MEDIA_URL" | tar -xz -C /repo/apps/api/media
+# MemER lift_barrier rollout clips (workspace + wristcam dataset visualisers).
+# Separate tarball so adding it doesn't re-transfer the 254MB LiftBarrier one.
+ARG MEMER_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/memer_media.tar.gz
+RUN curl -fsSL "$MEMER_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 ENV FIELD_NOTES_MEDIA_DIR=/repo/apps/api/media
 
 COPY pyproject.toml uv.lock ./
