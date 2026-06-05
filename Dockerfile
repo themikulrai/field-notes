@@ -37,6 +37,11 @@ RUN mkdir -p /repo/apps/api/media \
 # Separate tarball so adding it doesn't re-transfer the 254MB LiftBarrier one.
 ARG MEMER_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/memer_media.tar.gz
 RUN curl -fsSL "$MEMER_MEDIA_URL" | tar -xz -C /repo/apps/api/media
+# Multiview (tiled all-camera) LB wristcam re-eval videos. Extracted LAST so it
+# overlays the global-only clips in the 4 wc dirs (pi/dp × cent/decent) with the
+# tiled global+wrist versions; same filenames → grid cells need no path change.
+ARG LIFTBARRIER_MV_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/liftbarrier_media_mv.tar.gz
+RUN curl -fsSL "$LIFTBARRIER_MV_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 ENV FIELD_NOTES_MEDIA_DIR=/repo/apps/api/media
 
 COPY pyproject.toml uv.lock ./
