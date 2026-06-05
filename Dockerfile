@@ -47,6 +47,11 @@ RUN curl -fsSL "$LIFTBARRIER_MV_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 # v2: + pi05_overfit_egocentric.mp4 (multiview 10k|49999 re-render).
 ARG OVERFIT_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/overfit_media.tar.gz
 RUN curl -fsSL "$OVERFIT_MEDIA_URL" | tar -xz -C /repo/apps/api/media
+# MemER LB wristcam hierarchical-eval clips, tiled multi-view (global + both
+# wrist) with the Boss subtask burned in — replaces the old global-only MemER
+# rollout clips so pos27 etc. show what the robot actually saw.
+ARG MEMER_MV_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/memer_lb_wc_mv_clips.tar.gz
+RUN curl -fsSL "$MEMER_MV_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 ENV FIELD_NOTES_MEDIA_DIR=/repo/apps/api/media
 
 COPY pyproject.toml uv.lock ./
