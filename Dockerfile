@@ -44,6 +44,7 @@ ARG LIFTBARRIER_MV_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-note
 RUN curl -fsSL "$LIFTBARRIER_MV_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 # overfit_ep0 tile videos — re-hosted off a dead trycloudflare tunnel (the
 # original host expired, so the pos17/pos18 overfit clips wouldn't load).
+# v2: + pi05_overfit_egocentric.mp4 (multiview 10k|49999 re-render).
 ARG OVERFIT_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/overfit_media.tar.gz
 RUN curl -fsSL "$OVERFIT_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 ENV FIELD_NOTES_MEDIA_DIR=/repo/apps/api/media
