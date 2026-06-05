@@ -12,6 +12,21 @@ from fastapi.staticfiles import StaticFiles
 from .config import get_settings
 from .routers import cells, events, projects, verdicts
 
+
+class _RevalidateStaticFiles(StaticFiles):
+    """StaticFiles that sends `Cache-Control: no-cache` so browsers always
+    revalidate via ETag before reusing a cached copy. Without this, /media
+    responses carried no Cache-Control and browsers cached heuristically — so
+    REPLACING a media file under the SAME filename (e.g. swapping in tiled
+    multi-view eval videos) left users seeing the STALE old video. `no-cache`
+    still allows 304s when the file is unchanged, so it's cheap.
+    """
+
+    async def get_response(self, path, scope):  # type: ignore[override]
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
 settings = get_settings()
 
 app = FastAPI(title="Field Notes API", version="0.1.0")
@@ -49,7 +64,7 @@ app.include_router(events.router)
 # supports HTTP Range requests, which the <video> players need for seeking.
 _media_dir = os.getenv("FIELD_NOTES_MEDIA_DIR")
 if _media_dir and Path(_media_dir).is_dir():
-    app.mount("/media", StaticFiles(directory=_media_dir), name="media")
+    app.mount("/media", _RevalidateStaticFiles(directory=_media_dir), name="media")
 
 _static_dir = os.getenv("FIELD_NOTES_STATIC_DIR")
 if _static_dir and Path(_static_dir).is_dir():
