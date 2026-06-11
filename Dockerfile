@@ -52,6 +52,10 @@ RUN curl -fsSL "$OVERFIT_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 # rollout clips so pos27 etc. show what the robot actually saw.
 ARG MEMER_MV_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/memer_lb_wc_mv_clips.tar.gz
 RUN curl -fsSL "$MEMER_MV_MEDIA_URL" | tar -xz -C /repo/apps/api/media
+# Stacking Cubes 3SC wristcam no-aug + zerostate clips, 2x2 multi-view (global +
+# 3 wrist cams) — replaces the old single-global clips in the 3 SC eval cells.
+ARG SC3_MV_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/sc3_wc_mv_clips.tar.gz
+RUN curl -fsSL "$SC3_MV_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 ENV FIELD_NOTES_MEDIA_DIR=/repo/apps/api/media
 
 COPY pyproject.toml uv.lock ./
