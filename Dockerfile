@@ -56,6 +56,13 @@ RUN curl -fsSL "$MEMER_MV_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 # 3 wrist cams) — replaces the old single-global clips in the 3 SC eval cells.
 ARG SC3_MV_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/sc3_wc_mv_clips.tar.gz
 RUN curl -fsSL "$SC3_MV_MEDIA_URL" | tar -xz -C /repo/apps/api/media
+# Input-viewer GT-demo + DP/Pi0.5 input comparison clips (PickMeat, StackCube,
+# 2SC/3SC, LiftBarrier probe) — re-hosted off the dead `helps-adjusted-sharp-bind`
+# trycloudflare quick-tunnel that broke the input-viewer cells across Lift Barrier,
+# Pick Meat and Stacking Cubes. Re-encoded h264 crf30 +faststart (2.1GB raw ->
+# ~0.7GB). Structure <task>/videos/<ep>.mp4 matches the cell JS path build unchanged.
+ARG INPUTVIEWER_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/inputviewer_media.tar.gz
+RUN curl -fsSL "$INPUTVIEWER_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 ENV FIELD_NOTES_MEDIA_DIR=/repo/apps/api/media
 
 COPY pyproject.toml uv.lock ./
