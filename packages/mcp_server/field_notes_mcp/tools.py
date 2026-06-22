@@ -466,6 +466,11 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
             "Create a cell in a project. kind=agent|markdown|empty. "
             "Markdown cells take `body` only; agent cells take title/conclusion/metrics/visual/video/deep; "
             "empty cells take no payload. "
+            "ALWAYS fill `deep` on agent cells — it is how the human audits the work, and a cell "
+            "without it is treated as incomplete. `deep` has four parts: `hparams` (the key config "
+            "that defines the run, e.g. lr/batch/model), `files` (paths you created or modified), "
+            "`runs` (wandb/job links, e.g. {'name':'...','url':'wandb://...'} or a plain URL), and "
+            "`logs` (the salient stdout/metric lines). `deep` does NOT apply to markdown/empty cells. "
             "For sandboxes larger than ~40 KB, create the cell without `visual` and use "
             "append_visual_sandbox to build it up in chunks — the tool-call channel clamps "
             "large inputs and can silently arrive empty."
@@ -505,7 +510,10 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
         description=(
             "Update a cell. Both `cell_id` and `patch` are required. Put the writable fields "
             "nested inside `patch`, e.g. patch={'conclusion': '', 'status': 'verified'}. "
-            "Send ONLY the fields you want to change. For sandbox-internal edits use "
+            "Send ONLY the fields you want to change. Keep `deep` current as the work progresses "
+            "on agent cells — add the wandb run to `deep.runs` once it launches, append final "
+            "metrics to `deep.logs` when done, and record any new `files`/`hparams`. "
+            "For sandbox-internal edits use "
             "patch_visual_sandbox instead — bundling a large visual here can exceed tool-call "
             "channel limits. Verdict/locked are human-only. Locked cells → {error:'locked_cell',...}."
         )

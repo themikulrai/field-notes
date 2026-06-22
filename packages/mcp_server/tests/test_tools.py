@@ -367,6 +367,32 @@ def test_update_project_unknown_field_rejected() -> None:
         T.UpdateProjectInput.model_validate({"project_id": str(pid), "bogus": "x"})
 
 
+# ----- Tool descriptions nudge agents to fill the deep block --------------
+# Pins the intent of the create_cell/update_cell descriptions: agents only fill
+# hparams/files/runs/logs if the tool surface tells them to. A future reword
+# that drops this guidance should fail loudly here.
+
+
+async def _registered_descriptions() -> dict[str, str]:
+    from mcp.server.fastmcp import FastMCP
+
+    mcp = FastMCP("test")
+    T.register_tools(mcp, lambda: None)  # type: ignore[arg-type,return-value]
+    return {t.name: (t.description or "") for t in await mcp.list_tools()}
+
+
+async def test_create_cell_description_mentions_deep_block() -> None:
+    desc = (await _registered_descriptions())["create_cell"].lower()
+    assert "deep" in desc
+    for part in ("hparams", "files", "runs", "logs"):
+        assert part in desc, f"create_cell description should mention deep.{part}"
+
+
+async def test_update_cell_description_mentions_deep_block() -> None:
+    desc = (await _registered_descriptions())["update_cell"].lower()
+    assert "deep" in desc
+
+
 def test_update_project_both_flat_and_nested_rejected() -> None:
     import pytest
 
