@@ -70,6 +70,13 @@ RUN curl -fsSL "$INPUTVIEWER_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 # dpws_<seed>.mp4}.
 ARG FILMSTRIP_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/filmstrip_media.tar.gz
 RUN curl -fsSL "$FILMSTRIP_MEDIA_URL" | tar -xz -C /repo/apps/api/media
+# Input-viewer STILL IMAGES (filmstrips/ PNGs for the LiftBarrier probe cell,
+# thumbs/ JPG video posters for the StackCube/2SC/3SC viewers). The first
+# inputviewer tarball was built with `find -name '*.mp4'`, which dropped every
+# image file -> filmstrip <img> 404'd while videos worked. These overlay the
+# <task>/{filmstrips,thumbs}/ subdirs alongside the existing videos/.
+ARG INPUTVIEWER_IMAGES_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/inputviewer_images.tar.gz
+RUN curl -fsSL "$INPUTVIEWER_IMAGES_URL" | tar -xz -C /repo/apps/api/media
 ENV FIELD_NOTES_MEDIA_DIR=/repo/apps/api/media
 
 COPY pyproject.toml uv.lock ./
