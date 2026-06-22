@@ -350,6 +350,17 @@
   }
   .agent-content { min-width: 0; }
   .conclusion { margin: 0 0 14px; font-size: 15.5px; line-height: 1.55; color: var(--ink); text-wrap: pretty; }
+  .conclusion--placeholder { color: var(--ink-4); font-style: italic; }
+  input.inline-edit-input {
+    font: inherit;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--c-blue);
+    border-radius: 8px;
+    padding: 2px 8px;
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--c-blue) 20%, transparent);
+  }
 
   .outputs { display: flex; flex-direction: column; gap: 14px; }
   .metrics {

@@ -12,6 +12,7 @@ import { VideoSlot } from "./VideoSlot";
 import { Sparkline } from "./Sparkline";
 import { VerdictZone } from "./VerdictZone";
 import { DeepLayer } from "./DeepLayer";
+import { InlineEdit } from "./InlineEdit";
 
 interface Props {
   cell: CellData;
@@ -23,6 +24,7 @@ interface Props {
   onVerdict: (cid: string, state: VerdictState | null, note: string) => void;
   onUnlock: (cid: string) => void;
   onDelete: (cid: string) => void;
+  onChange: (cid: string, patch: { title?: string; conclusion?: string }) => void;
 }
 
 export function Cell({
@@ -35,6 +37,7 @@ export function Cell({
   onVerdict,
   onUnlock,
   onDelete,
+  onChange,
 }: Props) {
   const [open, setOpen] = useState(false);
   const status = cell.status || "open";
@@ -77,7 +80,14 @@ export function Cell({
             <span className="cell-collapse-chevron" aria-hidden="true">
               {collapsed ? "▸" : "▾"}
             </span>
-            {cell.title || "untitled"}
+            <InlineEdit
+              value={cell.title || ""}
+              multiline={false}
+              disabled={locked}
+              ariaLabel="edit title"
+              renderView={() => <>{cell.title || "untitled"}</>}
+              onSave={(next) => onChange(cell.id, { title: next })}
+            />
           </h2>
         </div>
         <div className="cell-head-right">
@@ -147,7 +157,20 @@ export function Cell({
               <span className="agent-rail-label mono">agent</span>
             </div>
             <div className="agent-content">
-              {cell.conclusion && <p className="conclusion">{cell.conclusion}</p>}
+              <InlineEdit
+                value={cell.conclusion || ""}
+                multiline
+                disabled={locked}
+                ariaLabel="edit conclusion"
+                renderView={() =>
+                  cell.conclusion ? (
+                    <p className="conclusion">{cell.conclusion}</p>
+                  ) : (
+                    <p className="conclusion conclusion--placeholder">add conclusion…</p>
+                  )
+                }
+                onSave={(next) => onChange(cell.id, { conclusion: next })}
+              />
               {(cell.metrics || cell.visual || cell.video) && (
                 <div className="outputs">
                   {cell.metrics && cell.metrics.length > 0 && <MetricRow items={cell.metrics} />}

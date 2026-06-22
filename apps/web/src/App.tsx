@@ -257,6 +257,7 @@ function Main() {
           onVerdict={(cid, state, note) => void setVerdict(cid, state, note)}
           onUnlock={(cid) => void unlockCell(cid)}
           onDelete={(cid) => void deleteCell(cid)}
+          onChange={(cid, patch) => void updateCell(cid, patch)}
         />
       );
     }

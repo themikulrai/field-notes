@@ -32,6 +32,7 @@ describe("Cell", () => {
         onVerdict={vi.fn()}
         onUnlock={vi.fn()}
         onDelete={vi.fn()}
+        onChange={vi.fn()}
       />,
     );
     expect(screen.getByText("run 4")).toBeInTheDocument();
@@ -52,6 +53,7 @@ describe("Cell", () => {
         onVerdict={spy}
         onUnlock={vi.fn()}
         onDelete={vi.fn()}
+        onChange={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByText("verify"));
@@ -73,6 +75,7 @@ describe("Cell", () => {
         onVerdict={vi.fn()}
         onUnlock={vi.fn()}
         onDelete={vi.fn()}
+        onChange={vi.fn()}
       />,
     );
     expect(screen.queryByText("verify")).toBeNull();
@@ -91,6 +94,7 @@ describe("Cell", () => {
         onVerdict={vi.fn()}
         onUnlock={vi.fn()}
         onDelete={vi.fn()}
+        onChange={vi.fn()}
       />,
     );
     const ta = screen.getByPlaceholderText(/write what you think/);
@@ -113,12 +117,114 @@ describe("Cell", () => {
           onVerdict={vi.fn()}
           onUnlock={vi.fn()}
           onDelete={vi.fn()}
+          onChange={vi.fn()}
         />,
       ),
     ).not.toThrow();
     // degrades to the "open" (needs-review) presentation
     expect(screen.getByText("run 4")).toBeInTheDocument();
     expect(screen.getByLabelText("status: open")).toBeInTheDocument();
+  });
+
+  it("double-clicking the title enters edit and does NOT toggle collapse", () => {
+    const toggle = vi.fn();
+    render(
+      <Cell
+        cell={mkCell()}
+        index={0}
+        total={1}
+        onToggleCollapse={toggle}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    fireEvent.doubleClick(screen.getByText("run 4"));
+    expect(toggle).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("edit title")).toBeInTheDocument();
+  });
+
+  it("saving the title calls onChange with { title }", () => {
+    const onChange = vi.fn();
+    render(
+      <Cell
+        cell={mkCell()}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.doubleClick(screen.getByText("run 4"));
+    const input = screen.getByLabelText("edit title");
+    fireEvent.change(input, { target: { value: "run 5" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onChange).toHaveBeenCalledWith("c1", { title: "run 5" });
+  });
+
+  it("saving the conclusion calls onChange with { conclusion }", () => {
+    const onChange = vi.fn();
+    render(
+      <Cell
+        cell={mkCell()}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.doubleClick(screen.getByText("Run 4 looks good."));
+    const ta = screen.getByLabelText("edit conclusion");
+    fireEvent.change(ta, { target: { value: "Run 4 is great." } });
+    fireEvent.keyDown(ta, { key: "Enter", metaKey: true });
+    expect(onChange).toHaveBeenCalledWith("c1", { conclusion: "Run 4 is great." });
+  });
+
+  it("a locked cell does not enter edit mode on double-click", () => {
+    render(
+      <Cell
+        cell={mkCell({ locked: true })}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    fireEvent.doubleClick(screen.getByText("run 4"));
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("empty-conclusion cell shows an editable 'add conclusion' target", () => {
+    const onChange = vi.fn();
+    render(
+      <Cell
+        cell={mkCell({ conclusion: "" })}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={onChange}
+      />,
+    );
+    const target = screen.getByText(/add conclusion/i);
+    fireEvent.doubleClick(target);
+    const ta = screen.getByLabelText("edit conclusion");
+    fireEvent.change(ta, { target: { value: "now concluded" } });
+    fireEvent.keyDown(ta, { key: "Enter", metaKey: true });
+    expect(onChange).toHaveBeenCalledWith("c1", { conclusion: "now concluded" });
   });
 
   it("when collapsed, hides conclusion + metrics; clicking header toggles", () => {
@@ -134,6 +240,7 @@ describe("Cell", () => {
         onVerdict={vi.fn()}
         onUnlock={vi.fn()}
         onDelete={vi.fn()}
+        onChange={vi.fn()}
       />,
     );
     expect(screen.getByText("run 4")).toBeInTheDocument();
@@ -154,6 +261,7 @@ describe("Cell", () => {
         onVerdict={vi.fn()}
         onUnlock={vi.fn()}
         onDelete={vi.fn()}
+        onChange={vi.fn()}
       />,
     );
     expect(screen.getByText("Run 4 looks good.")).toBeInTheDocument();
