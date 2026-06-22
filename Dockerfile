@@ -63,6 +63,13 @@ RUN curl -fsSL "$SC3_MV_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 # ~0.7GB). Structure <task>/videos/<ep>.mp4 matches the cell JS path build unchanged.
 ARG INPUTVIEWER_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/inputviewer_media.tar.gz
 RUN curl -fsSL "$INPUTVIEWER_MEDIA_URL" | tar -xz -C /repo/apps/api/media
+# Filmstrip frames + clips (DP ws decentralised, 8 seeds) for the Lift Barrier
+# "Timestep filmstrips" cell. These were embedded inline as base64 (80 jpg + 8
+# mp4), bloating that cell to 2.3MB so the iframe srcdoc would not render. Moved
+# out to /media (cell -> ~20KB). Dir LiftBarrier_filmstrip_dpws/{frame_NNN.jpg,
+# dpws_<seed>.mp4}.
+ARG FILMSTRIP_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/filmstrip_media.tar.gz
+RUN curl -fsSL "$FILMSTRIP_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 ENV FIELD_NOTES_MEDIA_DIR=/repo/apps/api/media
 
 COPY pyproject.toml uv.lock ./
