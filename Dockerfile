@@ -62,7 +62,11 @@ RUN curl -fsSL "$SC3_MV_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 # Pick Meat and Stacking Cubes. Re-encoded h264 crf30 +faststart (2.1GB raw ->
 # ~0.7GB). Structure <task>/videos/<ep>.mp4 matches the cell JS path build unchanged.
 ARG INPUTVIEWER_MEDIA_URL=https://huggingface.co/datasets/mikulrai/field-notes-liftbarrier-media/resolve/main/inputviewer_media.tar.gz
-RUN curl -fsSL "$INPUTVIEWER_MEDIA_URL" | tar -xz -C /repo/apps/api/media
+# Bump INPUTVIEWER_MEDIA_REV whenever the tarball content changes (same URL) to bust
+# the Docker layer cache and force a fresh fetch. 2026-06-24: StackCube_formats zarr
+# panels re-rendered 30fps->20fps to match libero panels (fix play-length desync).
+ARG INPUTVIEWER_MEDIA_REV=2026-06-24-stackcube-fps
+RUN echo "media rev: $INPUTVIEWER_MEDIA_REV" && curl -fsSL "$INPUTVIEWER_MEDIA_URL" | tar -xz -C /repo/apps/api/media
 # Input-viewer STILL IMAGES (filmstrips/ PNGs for the LiftBarrier probe cell,
 # thumbs/ JPG video posters for the StackCube/2SC/3SC viewers). The first
 # inputviewer tarball was built with `find -name '*.mp4'`, which dropped every
