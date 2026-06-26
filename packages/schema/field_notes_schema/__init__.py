@@ -95,6 +95,10 @@ class DeepBlock(BaseModel):
     files: list[str] = Field(default_factory=list)
     runs: list[dict] = Field(default_factory=list)
     logs: str = ""
+    # Explicit "not applicable" escape: set na=True on agent cells that genuinely
+    # have no hyperparameters/runs (e.g. a pure analysis or summary), so the
+    # mandatory-deep check passes without inventing fake content.
+    na: bool = False
 
 
 UiFilter = Literal["all", "in_progress", "open", "verified", "rejected"]

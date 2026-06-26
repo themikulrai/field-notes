@@ -56,6 +56,8 @@ export interface DeepBlock {
   files: string[];
   runs: Array<{ name: string; url: string }>;
   logs: string;
+  // "not applicable" — set by agents on cells with genuinely no hparams/runs.
+  na?: boolean;
 }
 
 export interface ProjectCounts {

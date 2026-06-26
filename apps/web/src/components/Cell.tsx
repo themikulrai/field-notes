@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
-import type { Cell as CellData, VerdictState } from "../lib/types";
+import type { Cell as CellData, DeepBlock, VerdictState } from "../lib/types";
 import { statusMeta } from "../lib/format";
 import { StatusBadge } from "./StatusBadge";
 import { MetricRow } from "./MetricRow";
@@ -13,6 +13,19 @@ import { Sparkline } from "./Sparkline";
 import { VerdictZone } from "./VerdictZone";
 import { DeepLayer } from "./DeepLayer";
 import { InlineEdit } from "./InlineEdit";
+
+// A deep block is worth showing only when it actually has content. `na` (the
+// agent flagged it not-applicable) and empty blocks render nothing, so we hide
+// the toggle entirely rather than offer a control that opens to nothing.
+function deepHasContent(deep: DeepBlock | null | undefined): boolean {
+  if (!deep || deep.na) return false;
+  return (
+    Object.keys(deep.hparams || {}).length > 0 ||
+    (deep.files || []).length > 0 ||
+    (deep.runs || []).length > 0 ||
+    (deep.logs || "").trim().length > 0
+  );
+}
 
 interface Props {
   cell: CellData;
@@ -43,6 +56,7 @@ export function Cell({
   const status = cell.status || "open";
   const s = statusMeta(status);
   const locked = !!cell.locked;
+  const hasDeep = deepHasContent(cell.deep);
 
   const toggleCollapse = onToggleCollapse ?? (() => {});
   const handleHeadKey = (e: KeyboardEvent) => {
@@ -193,39 +207,43 @@ export function Cell({
             onUnlock={() => onUnlock(cell.id)}
           />
 
-          <button
-            className={`deep-toggle ${open ? "is-open" : ""}`}
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-          >
-            <span className="deep-toggle-line" aria-hidden="true" />
-            <span className="deep-toggle-label mono">
-              <svg
-                viewBox="0 0 12 12"
-                width="10"
-                height="10"
-                aria-hidden="true"
-                style={{
-                  transform: open ? "rotate(90deg)" : "none",
-                  transition: "transform 160ms",
-                }}
+          {hasDeep && (
+            <>
+              <button
+                className={`deep-toggle ${open ? "is-open" : ""}`}
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
               >
-                <path
-                  d="M4 2l4 4-4 4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {open ? "hide details" : "show hyperparameters, files, runs, logs"}
-            </span>
-            <span className="deep-toggle-line" aria-hidden="true" />
-          </button>
+                <span className="deep-toggle-line" aria-hidden="true" />
+                <span className="deep-toggle-label mono">
+                  <svg
+                    viewBox="0 0 12 12"
+                    width="10"
+                    height="10"
+                    aria-hidden="true"
+                    style={{
+                      transform: open ? "rotate(90deg)" : "none",
+                      transition: "transform 160ms",
+                    }}
+                  >
+                    <path
+                      d="M4 2l4 4-4 4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {open ? "hide details" : "show hyperparameters, files, runs, logs"}
+                </span>
+                <span className="deep-toggle-line" aria-hidden="true" />
+              </button>
 
-          {open && cell.deep && <DeepLayer deep={cell.deep} />}
+              {open && cell.deep && <DeepLayer deep={cell.deep} />}
+            </>
+          )}
         </>
       )}
     </article>

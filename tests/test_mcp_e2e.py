@@ -99,6 +99,7 @@ async def test_agent_vs_human_boundary(mcp_client, human_client) -> None:
             kind="agent",
             title="Test 1",
             conclusion="this passed",
+            deep={"hparams": {"seed": "0"}},
         ),
     )
     cid = uuid.UUID(cell["id"])

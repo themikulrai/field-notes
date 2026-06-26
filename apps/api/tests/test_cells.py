@@ -429,7 +429,7 @@ async def test_append_finalize_on_verified_cell_returns_to_open(client, project_
 async def test_create_mcp_forces_status_open_overriding_body(client, project_id) -> None:
     r = await client.post(
         f"/projects/{project_id}/cells",
-        json={"kind": "agent", "title": "A", "status": "verified"},
+        json={"kind": "agent", "title": "A", "status": "verified", "deep": {"na": True}},
         headers={"X-Field-Notes-Source": "mcp"},
     )
     assert r.status_code == 201, r.text
@@ -439,7 +439,7 @@ async def test_create_mcp_forces_status_open_overriding_body(client, project_id)
 async def test_create_mcp_forces_status_open_when_unset(client, project_id) -> None:
     r = await client.post(
         f"/projects/{project_id}/cells",
-        json={"kind": "agent", "title": "A"},
+        json={"kind": "agent", "title": "A", "deep": {"na": True}},
         headers={"X-Field-Notes-Source": "mcp"},
     )
     assert r.status_code == 201, r.text
@@ -468,7 +468,7 @@ async def test_patch_mcp_status_forced_open_even_when_body_says_verified(
     client, project_id
 ) -> None:
     # Seed cell + verdict (so we can confirm verdict relationship is untouched).
-    c = await _create_cell(client, project_id, title="A")
+    c = await _create_cell(client, project_id, title="A", deep={"na": True})
     vr = await client.post(f"/cells/{c['id']}/verdict", json={"state": "accept", "note": "ok"})
     assert vr.status_code == 200, vr.text
     assert vr.json()["status"] == "verified"
@@ -490,7 +490,7 @@ async def test_patch_mcp_status_forced_open_even_when_body_says_verified(
 
 
 async def test_patch_mcp_no_status_in_body_still_reopens(client, project_id) -> None:
-    c = await _create_cell(client, project_id, title="A", status="verified")
+    c = await _create_cell(client, project_id, title="A", status="verified", deep={"na": True})
     assert c["status"] == "verified"
     # Touching only `conclusion` via MCP must still flip status -> open.
     r = await client.patch(
@@ -519,3 +519,105 @@ async def test_patch_http_status_passes_through(client, project_id) -> None:
     )
     assert r.status_code == 200, r.text
     assert r.json()["status"] == "rejected"
+
+
+# ---------- Mandatory deep block on MCP-sourced agent cells ----------
+#
+# Agent cells written by agents (source=mcp) must carry a deep block (or na), and
+# it must stay within size caps. http (human) writes are never blocked.
+
+MCP = {"X-Field-Notes-Source": "mcp"}
+
+
+async def test_mcp_agent_create_without_deep_is_rejected(client, project_id) -> None:
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "A"},
+        headers=MCP,
+    )
+    assert r.status_code == 422, r.text
+    assert "deep" in r.json()["detail"].lower()
+
+
+async def test_mcp_agent_create_with_na_is_accepted(client, project_id) -> None:
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "A", "deep": {"na": True}},
+        headers=MCP,
+    )
+    assert r.status_code == 201, r.text
+
+
+async def test_mcp_agent_create_with_filled_deep_is_accepted(client, project_id) -> None:
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "A", "deep": {"hparams": {"lr": "3e-4"}}},
+        headers=MCP,
+    )
+    assert r.status_code == 201, r.text
+
+
+async def test_mcp_agent_create_oversized_logs_is_rejected(client, project_id) -> None:
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "A", "deep": {"logs": "x" * 2000}},
+        headers=MCP,
+    )
+    assert r.status_code == 422, r.text
+    assert "logs" in r.json()["detail"].lower()
+
+
+async def test_mcp_agent_create_too_many_hparams_is_rejected(client, project_id) -> None:
+    hparams = {f"k{i}": str(i) for i in range(40)}
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "A", "deep": {"hparams": hparams}},
+        headers=MCP,
+    )
+    assert r.status_code == 422, r.text
+    assert "hparams" in r.json()["detail"].lower()
+
+
+async def test_http_agent_create_without_deep_is_allowed(client, project_id) -> None:
+    # The human (source=http) is never blocked for a missing deep block.
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "A"},
+    )
+    assert r.status_code == 201, r.text
+
+
+async def test_mcp_markdown_create_not_subject_to_deep_rule(client, project_id) -> None:
+    # Enforcement is agent-only; a markdown note via mcp needs no deep.
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "markdown", "body": "## Results"},
+        headers=MCP,
+    )
+    assert r.status_code == 201, r.text
+
+
+async def test_mcp_update_deepless_agent_without_deep_is_rejected(client, project_id) -> None:
+    c = await _create_cell(client, project_id, title="A")  # http create, no deep
+    r = await client.patch(f"/cells/{c['id']}", json={"conclusion": "redo"}, headers=MCP)
+    assert r.status_code == 422, r.text
+    assert "deep" in r.json()["detail"].lower()
+
+
+async def test_mcp_update_supplying_deep_is_accepted(client, project_id) -> None:
+    c = await _create_cell(client, project_id, title="A")  # http create, no deep
+    r = await client.patch(
+        f"/cells/{c['id']}",
+        json={"conclusion": "redo", "deep": {"hparams": {"lr": "1e-4"}}},
+        headers=MCP,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["deep"]["hparams"]["lr"] == "1e-4"
+
+
+async def test_http_update_deepless_agent_is_allowed(client, project_id) -> None:
+    # Human edit of a deep-less agent cell is not blocked.
+    c = await _create_cell(client, project_id, title="A")
+    r = await client.patch(f"/cells/{c['id']}", json={"conclusion": "human note"})
+    assert r.status_code == 200, r.text
+    assert r.json()["conclusion"] == "human note"

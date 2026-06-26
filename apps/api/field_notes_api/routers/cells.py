@@ -80,6 +80,83 @@ def _validate_cell_payload(body: CellCreate) -> None:
             raise HTTPException(status_code=422, detail="agent cells may not set `body` (markdown only)")
 
 
+# Deep-block (hparams/files/runs/logs) is how the human audits an agent cell, so
+# agent cells written by agents (source=mcp) must carry one — or be flagged
+# not-applicable. It must also stay SMALL so the notebook is fast to read; these
+# caps reject a data-dump and ask the agent to summarize. Enforcement is scoped
+# to source=mcp: the human (source=http) is never blocked.
+DEEP_MAX_HPARAMS = 24
+DEEP_MAX_KV_CHARS = 120  # key + value, per hparam
+DEEP_MAX_FILES = 24
+DEEP_MAX_RUNS = 12
+DEEP_MAX_LOG_CHARS = 1500
+
+
+def _deep_filled(deep: dict | None) -> bool:
+    """A deep block counts as 'filled' if na=True or any of the four parts has content."""
+    if not deep:
+        return False
+    if deep.get("na") is True:
+        return True
+    return bool(deep.get("hparams") or deep.get("files") or deep.get("runs") or deep.get("logs"))
+
+
+def _validate_deep_size(deep: dict | None) -> None:
+    if not deep:
+        return
+    hp = deep.get("hparams") or {}
+    if len(hp) > DEEP_MAX_HPARAMS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"deep.hparams has {len(hp)} entries; keep it ≤ {DEEP_MAX_HPARAMS} — list only the key config",
+        )
+    for k, val in hp.items():
+        if len(str(k)) + len(str(val)) > DEEP_MAX_KV_CHARS:
+            raise HTTPException(
+                status_code=422,
+                detail=f"deep.hparams['{k}'] is too long (>{DEEP_MAX_KV_CHARS} chars key+value) — summarize it",
+            )
+    files = deep.get("files") or []
+    if len(files) > DEEP_MAX_FILES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"deep.files has {len(files)} entries; keep it ≤ {DEEP_MAX_FILES} — list only the key paths",
+        )
+    runs = deep.get("runs") or []
+    if len(runs) > DEEP_MAX_RUNS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"deep.runs has {len(runs)} entries; keep it ≤ {DEEP_MAX_RUNS}",
+        )
+    logs = deep.get("logs") or ""
+    if len(logs) > DEEP_MAX_LOG_CHARS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"deep.logs is {len(logs)} chars; keep it ≤ {DEEP_MAX_LOG_CHARS} — "
+                "paste only the salient metric/stdout lines"
+            ),
+        )
+
+
+def _enforce_agent_deep(deep: dict | None, source: str) -> None:
+    """For MCP-sourced agent cells: deep must be present (or na) and within caps.
+
+    No-op for source=http so a human web edit is never blocked.
+    """
+    if source != "mcp":
+        return
+    _validate_deep_size(deep)
+    if not _deep_filled(deep):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "agent cells must include a deep block (hparams/files/runs/logs) or set deep.na=true — "
+                "it is how the human audits the work"
+            ),
+        )
+
+
 async def _project_cells_ordered(session: AsyncSession, pid: uuid.UUID) -> list[Cell]:
     result = await session.execute(select(Cell).where(Cell.project_id == pid).order_by(Cell.position))
     return list(result.scalars().all())
@@ -123,6 +200,8 @@ async def create_cell(
     if p is None:
         raise HTTPException(status_code=404, detail="project not found")
     _validate_cell_payload(body)
+    if body.kind == CellKind.agent:
+        _enforce_agent_deep(body.deep.model_dump() if body.deep is not None else None, _source(request))
 
     cells = await _project_cells_ordered(session, pid)
     if body.after_cell_id is None:
@@ -233,6 +312,11 @@ async def update_cell(
             c.status = v.value if hasattr(v, "value") else v
         else:
             setattr(c, k, v)
+    # Mandatory deep block on MCP-sourced agent-cell edits (no-op for http/human).
+    # Checks the MERGED result, so an edit that doesn't touch an already-filled
+    # deep passes, and one that leaves it empty is rejected.
+    if c.kind == CellKind.agent.value:
+        _enforce_agent_deep(c.deep, _source(request))
     # Server-side invariant: any MCP-sourced edit re-opens the cell. Applies
     # after all field merges so it overrides any explicit `status` in the patch
     # as well as any "no status field at all" case. Verdict relationship is

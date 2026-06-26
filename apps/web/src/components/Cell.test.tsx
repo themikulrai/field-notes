@@ -272,6 +272,57 @@ describe("Cell", () => {
     expect(onChange).toHaveBeenCalledWith("c1", { conclusion: "now concluded" });
   });
 
+  it("hides the deep toggle when the cell has no deep content", () => {
+    render(
+      <Cell
+        cell={mkCell({ deep: null })}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/show hyperparameters/i)).toBeNull();
+  });
+
+  it("hides the deep toggle when deep is flagged not-applicable (na)", () => {
+    render(
+      <Cell
+        cell={mkCell({ deep: { hparams: {}, files: [], runs: [], logs: "", na: true } })}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/show hyperparameters/i)).toBeNull();
+  });
+
+  it("shows the deep toggle when deep has content, and opens it", () => {
+    render(
+      <Cell
+        cell={mkCell({ deep: { hparams: { lr: "3e-4" }, files: [], runs: [], logs: "" } })}
+        index={0}
+        total={1}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    const toggle = screen.getByText(/show hyperparameters/i);
+    fireEvent.click(toggle);
+    expect(screen.getByText("hyperparameters")).toBeInTheDocument();
+    expect(screen.getByText("lr")).toBeInTheDocument();
+  });
+
   it("when collapsed, hides conclusion + metrics; clicking header toggles", () => {
     const toggle = vi.fn();
     const { rerender } = render(
