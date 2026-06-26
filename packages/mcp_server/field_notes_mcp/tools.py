@@ -463,9 +463,15 @@ def register_tools(mcp: FastMCP, get_client: Callable[[], FieldNotesClient]) -> 
 
     @mcp.tool(
         description=(
-            "Create a cell in a project. kind=agent|markdown|empty. "
-            "Markdown cells take `body` only; agent cells take title/conclusion/metrics/visual/video/deep; "
-            "empty cells take no payload. "
+            "Create a cell in a project. There are three things you can create, all via `kind`:\n"
+            "  • a NOTE (your own prose / explanation) → kind=markdown with a text `body`.\n"
+            "  • a SECTION heading (a collapsible group over the cells beneath it) → kind=markdown "
+            "with a `body` that STARTS WITH '# ' or '## ' (e.g. body='## Results'). There is NO "
+            "separate 'section' kind — a section is simply a markdown cell whose body is a heading.\n"
+            "  • a RESULT → kind=agent (title/conclusion/metrics/visual/video/deep). Use this to "
+            "report what a run/experiment produced.\n"
+            "(kind=empty makes a bare placeholder and takes no payload.) "
+            "Markdown cells take `body` only; agent cells never take `body`. "
             "ALWAYS fill `deep` on agent cells — it is how the human audits the work, and a cell "
             "without it is treated as incomplete. `deep` has four parts: `hparams` (the key config "
             "that defines the run, e.g. lr/batch/model), `files` (paths you created or modified), "

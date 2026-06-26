@@ -388,6 +388,17 @@ async def test_create_cell_description_mentions_deep_block() -> None:
         assert part in desc, f"create_cell description should mention deep.{part}"
 
 
+async def test_create_cell_description_distinguishes_note_section_result() -> None:
+    # Item 1: agents must be able to tell note vs section vs result apart. The
+    # description must spell out that a section is a markdown cell with a heading
+    # body (no separate kind), a note is markdown prose, a result is an agent cell.
+    desc = (await _registered_descriptions())["create_cell"].lower()
+    assert "section" in desc
+    assert "## " in desc or "# " in desc, "must show the heading-body recipe for a section"
+    for word in ("note", "result", "markdown", "agent"):
+        assert word in desc, f"create_cell description should mention {word!r}"
+
+
 async def test_update_cell_description_mentions_deep_block() -> None:
     desc = (await _registered_descriptions())["update_cell"].lower()
     assert "deep" in desc
