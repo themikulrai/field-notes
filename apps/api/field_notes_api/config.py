@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     field_notes_cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     # SSE keepalive interval. Overridable in tests so we don't wait 25s for a keepalive assertion.
     field_notes_sse_keepalive_seconds: float = 25.0
+    # Local single-process self-host: when true, the API key + SSE token checks
+    # become no-ops. Set automatically by `field-notes serve` on a loopback bind
+    # with no key. Default stays False so Heroku/networked deploys stay locked.
+    field_notes_auth_disabled: bool = Field(default=False)
+    # Where the local install keeps its SQLite DB + managed media (resolved by
+    # the serve CLI; unused by the networked deploy).
+    field_notes_data_dir: str | None = Field(default=None)
 
 
 @lru_cache
