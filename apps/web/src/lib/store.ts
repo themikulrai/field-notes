@@ -103,6 +103,8 @@ interface StoreState {
 
   createProject: (name: string) => Promise<Project | null>;
   deleteProject: (pid: string) => Promise<void>;
+  // Move a project to `toIndex` in the tab strip (optimistic, persisted).
+  reorderProject: (pid: string, toIndex: number) => Promise<void>;
 
   setVerdict: (cid: string, state: VerdictState | null, note: string) => Promise<void>;
   lockCell: (cid: string) => Promise<void>;
@@ -237,6 +239,27 @@ export const useStore = create<StoreState>((set, get) => ({
       await api.deleteProject(pid);
     } catch (e) {
       set({ projects: prev, activeProjectId: prevActive, error: (e as Error).message });
+    }
+  },
+
+  reorderProject: async (pid, toIndex) => {
+    const prev = get().projects;
+    const from = prev.findIndex((p) => p.id === pid);
+    if (from < 0) return;
+    const clamped = Math.max(0, Math.min(toIndex, prev.length - 1));
+    if (from === clamped) return;
+    // Optimistic splice so the tab moves immediately.
+    const next = [...prev];
+    const [moved] = next.splice(from, 1);
+    next.splice(clamped, 0, moved);
+    set({ projects: next });
+    try {
+      await api.reorderProject(pid, { position: clamped });
+      // Reconcile with canonical server positions (silent — no loading flicker).
+      const ps = await api.listProjects();
+      set({ projects: ps });
+    } catch (e) {
+      set({ projects: prev, error: (e as Error).message });
     }
   },
 

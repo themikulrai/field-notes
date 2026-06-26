@@ -39,6 +39,7 @@ function Main() {
   const setFilter = useStore((s) => s.setFilter);
   const createProject = useStore((s) => s.createProject);
   const deleteProject = useStore((s) => s.deleteProject);
+  const reorderProject = useStore((s) => s.reorderProject);
 
   const setVerdict = useStore((s) => s.setVerdict);
   const unlockCell = useStore((s) => s.unlockCell);
@@ -266,6 +267,7 @@ function Main() {
           activeId={activeId}
           onSelect={(pid) => setActiveProject(pid)}
           onClose={(pid) => void deleteProject(pid)}
+          onReorder={(pid, toIndex) => void reorderProject(pid, toIndex)}
           onAdd={() => {
             const name = window.prompt("Project name") || "untitled";
             void createProject(name);

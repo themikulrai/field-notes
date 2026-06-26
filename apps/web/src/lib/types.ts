@@ -75,6 +75,7 @@ export interface Project {
   created_at: string;
   updated_at: string;
   ui_filter?: "all" | CellStatus | null;
+  position?: number;
   counts?: ProjectCounts;
 }
 

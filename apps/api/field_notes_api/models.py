@@ -46,6 +46,9 @@ class Project(Base):
     subtitle: Mapped[str | None] = mapped_column(Text, nullable=True)
     repo: Mapped[str | None] = mapped_column(Text, nullable=True)
     ui_filter: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Manual left-to-right tab order (drag to reorder). Dense 0..N-1 at rest;
+    # create_project appends at the end, /projects/{pid}/reorder renumbers.
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

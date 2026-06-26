@@ -132,6 +132,9 @@ export function updateProject(pid: string, body: ProjectUpdate): Promise<Project
 export function deleteProject(pid: string): Promise<void> {
   return request<void>(`/projects/${pid}`, { method: "DELETE" });
 }
+export function reorderProject(pid: string, body: ReorderRequest): Promise<Project> {
+  return request<Project>(`/projects/${pid}/reorder`, { method: "POST", body });
+}
 
 // Cells --------------------------------------------------------------------
 export function listCells(pid: string): Promise<Cell[]> {

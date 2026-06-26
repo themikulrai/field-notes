@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Project, ProjectCounts } from "../lib/types";
 
 interface StripProps {
@@ -6,6 +7,8 @@ interface StripProps {
   onSelect: (pid: string) => void;
   onClose: (pid: string) => void;
   onAdd: () => void;
+  // Drop `pid` at the displayed index `toIndex` (drag-to-reorder the tab strip).
+  onReorder: (pid: string, toIndex: number) => void;
 }
 
 const ZERO_COUNTS: ProjectCounts = { in_progress: 0, open: 0, verified: 0, rejected: 0 };
@@ -14,24 +17,39 @@ function ProjectTab({
   project,
   active,
   canClose,
+  dragging,
+  dragOver,
   onClick,
   onClose,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
+  onDrop,
 }: {
   project: Project;
   active: boolean;
   canClose: boolean;
+  dragging: boolean;
+  dragOver: boolean;
   onClick: () => void;
   onClose: () => void;
+  onDragStart: () => void;
+  onDragEnter: () => void;
+  onDragEnd: () => void;
+  onDrop: () => void;
 }) {
   const c = project.counts ?? ZERO_COUNTS;
   const tooltip = project.subtitle ? `${project.name} · ${project.subtitle}` : project.name;
   return (
     <div
-      className={`ptab ${active ? "is-active" : ""}`}
+      className={`ptab ${active ? "is-active" : ""} ${dragging ? "is-dragging" : ""} ${
+        dragOver ? "is-drag-over" : ""
+      }`}
       role="tab"
       aria-selected={active}
       tabIndex={0}
       title={tooltip}
+      draggable
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -39,6 +57,18 @@ function ProjectTab({
           onClick();
         }
       }}
+      onDragStart={(e) => {
+        // jsdom has no dataTransfer; guard so unit tests can fire dragStart.
+        if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+        onDragStart();
+      }}
+      onDragEnter={onDragEnter}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop();
+      }}
+      onDragEnd={onDragEnd}
     >
       <div className="ptab-body">
         <div className="ptab-name">{project.name}</div>
@@ -95,7 +125,11 @@ export function ProjectTabStrip({
   onSelect,
   onClose,
   onAdd,
+  onReorder,
 }: StripProps) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
   return (
     <div className="ptab-strip" role="tablist" aria-label="projects">
       <div className="ptab-folder" aria-hidden="true">
@@ -116,8 +150,27 @@ export function ProjectTabStrip({
             project={p}
             active={p.id === activeId}
             canClose={projects.length > 1}
+            dragging={dragId === p.id}
+            dragOver={overId === p.id && dragId !== null && dragId !== p.id}
             onClick={() => onSelect(p.id)}
             onClose={() => onClose(p.id)}
+            onDragStart={() => {
+              setDragId(p.id);
+              setOverId(p.id);
+            }}
+            onDragEnter={() => setOverId(p.id)}
+            onDragEnd={() => {
+              setDragId(null);
+              setOverId(null);
+            }}
+            onDrop={() => {
+              if (dragId && dragId !== p.id) {
+                const toIndex = projects.findIndex((x) => x.id === p.id);
+                if (toIndex >= 0) onReorder(dragId, toIndex);
+              }
+              setDragId(null);
+              setOverId(null);
+            }}
           />
         ))}
       </div>

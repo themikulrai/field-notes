@@ -144,6 +144,10 @@
     border-color: var(--rule);
     box-shadow: 0 -3px 0 var(--c-blue) inset;
   }
+  /* Drag-to-reorder feedback. */
+  .ptab[draggable="true"] { cursor: grab; }
+  .ptab.is-dragging { opacity: 0.4; cursor: grabbing; }
+  .ptab.is-drag-over { box-shadow: 3px 0 0 var(--c-blue) inset; background: color-mix(in oklch, var(--c-blue) 10%, transparent); }
   .ptab-body {
     display: flex; flex-direction: column; gap: 2px;
     min-width: 0;

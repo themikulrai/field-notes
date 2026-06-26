@@ -5,8 +5,8 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from field_notes_schema import ProjectCreate, ProjectRead, ProjectUpdate, UiFilterSet
-from sqlalchemy import select
+from field_notes_schema import ProjectCreate, ProjectRead, ProjectUpdate, ReorderRequest, UiFilterSet
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import require_api_key
@@ -29,7 +29,8 @@ def _source(request: Request) -> str:
 
 @router.get("", response_model=list[ProjectRead])
 async def list_projects(session: AsyncSession = Depends(get_session)) -> list[ProjectRead]:
-    result = await session.execute(select(Project).order_by(Project.created_at))
+    # Manual tab order first; created_at only as a stable tiebreaker.
+    result = await session.execute(select(Project).order_by(Project.position, Project.created_at))
     projects = list(result.scalars().all())
     counts = await project_counts_map(session, [p.id for p in projects])
     return [project_to_read(p, counts.get(p.id)) for p in projects]
@@ -41,7 +42,11 @@ async def create_project(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> ProjectRead:
-    p = Project(id=uuid.uuid4(), name=body.name, subtitle=body.subtitle, repo=body.repo)
+    # Append at the end of the manual order. max+1 (not count) so a gap left by a
+    # deleted project never collides with an existing position.
+    max_pos = (await session.execute(select(func.max(Project.position)))).scalar()
+    next_pos = 0 if max_pos is None else max_pos + 1
+    p = Project(id=uuid.uuid4(), name=body.name, subtitle=body.subtitle, repo=body.repo, position=next_pos)
     session.add(p)
     await session.flush()
     env = await emit_event(
@@ -101,6 +106,54 @@ async def delete_project(pid: uuid.UUID, request: Request, session: AsyncSession
     env = await emit_event(session, "project.deleted", project_id=pid, source=_source(request))
     await session.commit()
     schedule_publish(env)
+
+
+@router.post("/{pid}/reorder", response_model=ProjectRead)
+async def reorder_project(
+    pid: uuid.UUID,
+    body: ReorderRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> ProjectRead:
+    """Move a project in the manual tab order. Provide exactly one of `direction`
+    ('up'|'down') or `position` (0-indexed). Renumbers all projects densely and
+    broadcasts `project.reordered` (the web store reloads projects on project.*).
+    """
+    result = await session.execute(select(Project).order_by(Project.position, Project.created_at))
+    projects = list(result.scalars().all())
+    idx = next((i for i, p in enumerate(projects) if p.id == pid), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail="project not found")
+    if body.direction is not None:
+        if body.direction == "up" and idx > 0:
+            projects[idx - 1], projects[idx] = projects[idx], projects[idx - 1]
+        elif body.direction == "down" and idx < len(projects) - 1:
+            projects[idx], projects[idx + 1] = projects[idx + 1], projects[idx]
+        # at a boundary: no-op
+    else:
+        assert body.position is not None
+        target = max(0, min(body.position, len(projects) - 1))
+        moved = projects.pop(idx)
+        projects.insert(target, moved)
+    # Renumber dense 0..N-1; projects have no unique-position constraint, so a
+    # direct assignment is safe (no negative-parking dance needed).
+    for i, p in enumerate(projects):
+        if p.position != i:
+            p.position = i
+    await session.flush()
+    moved_p = await session.get(Project, pid)
+    assert moved_p is not None
+    env = await emit_event(
+        session,
+        "project.reordered",
+        project_id=pid,
+        payload={"position": moved_p.position},
+        source=_source(request),
+    )
+    await session.commit()
+    await session.refresh(moved_p)
+    schedule_publish(env)
+    return project_to_read(moved_p, await project_counts_for(session, pid))
 
 
 @router.get("/{pid}/cells", response_model=list)

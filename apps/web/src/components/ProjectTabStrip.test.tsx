@@ -29,6 +29,7 @@ describe("ProjectTabStrip", () => {
         onSelect={() => {}}
         onClose={() => {}}
         onAdd={() => {}}
+        onReorder={() => {}}
       />,
     );
     // Alpha shows 3 awaiting review. in_progress is no longer surfaced.
@@ -50,6 +51,7 @@ describe("ProjectTabStrip", () => {
         onSelect={() => {}}
         onClose={() => {}}
         onAdd={() => {}}
+        onReorder={() => {}}
       />,
     );
     expect(screen.getByTitle("5 verified")).toBeTruthy();
@@ -69,6 +71,7 @@ describe("ProjectTabStrip", () => {
         onSelect={() => {}}
         onClose={() => {}}
         onAdd={() => {}}
+        onReorder={() => {}}
       />,
     );
     expect(screen.getByText("0")).toBeTruthy();
@@ -86,6 +89,7 @@ describe("ProjectTabStrip", () => {
         onSelect={() => {}}
         onClose={() => {}}
         onAdd={() => {}}
+        onReorder={() => {}}
       />,
     );
     expect(container.textContent ?? "").not.toContain(subtitle);
@@ -103,6 +107,7 @@ describe("ProjectTabStrip", () => {
         onSelect={() => {}}
         onClose={() => {}}
         onAdd={() => {}}
+        onReorder={() => {}}
       />,
     );
     const tabs = screen.getAllByRole("tab");
@@ -121,12 +126,59 @@ describe("ProjectTabStrip", () => {
         onSelect={() => {}}
         onClose={() => {}}
         onAdd={() => {}}
+        onReorder={() => {}}
       />,
     );
     // No in-progress or open pips, just the dim zero pip.
     expect(screen.queryByTitle(/in progress/)).toBeNull();
     expect(screen.queryByTitle(/awaiting review/)).toBeNull();
     expect(screen.getByText("0")).toBeTruthy();
+  });
+
+  it("dragging a tab onto another calls onReorder with that tab's index", () => {
+    const onReorder = vi.fn();
+    const projects: Project[] = [
+      makeProject({ id: "a", name: "Alpha" }),
+      makeProject({ id: "b", name: "Beta" }),
+      makeProject({ id: "c", name: "Gamma" }),
+    ];
+    render(
+      <ProjectTabStrip
+        projects={projects}
+        activeId="a"
+        onSelect={() => {}}
+        onClose={() => {}}
+        onAdd={() => {}}
+        onReorder={onReorder}
+      />,
+    );
+    const tabs = screen.getAllByRole("tab");
+    fireEvent.dragStart(tabs[0]); // grab Alpha (index 0)
+    fireEvent.dragEnter(tabs[2]);
+    fireEvent.drop(tabs[2]); // drop on Gamma (index 2)
+    expect(onReorder).toHaveBeenCalledWith("a", 2);
+  });
+
+  it("dropping a tab on itself does not call onReorder", () => {
+    const onReorder = vi.fn();
+    const projects: Project[] = [
+      makeProject({ id: "a", name: "Alpha" }),
+      makeProject({ id: "b", name: "Beta" }),
+    ];
+    render(
+      <ProjectTabStrip
+        projects={projects}
+        activeId="a"
+        onSelect={() => {}}
+        onClose={() => {}}
+        onAdd={() => {}}
+        onReorder={onReorder}
+      />,
+    );
+    const tabs = screen.getAllByRole("tab");
+    fireEvent.dragStart(tabs[0]);
+    fireEvent.drop(tabs[0]);
+    expect(onReorder).not.toHaveBeenCalled();
   });
 
   it("fires onSelect when a tab is clicked", () => {
@@ -142,6 +194,7 @@ describe("ProjectTabStrip", () => {
         onSelect={onSelect}
         onClose={() => {}}
         onAdd={() => {}}
+        onReorder={() => {}}
       />,
     );
     fireEvent.click(screen.getByText("Beta"));

@@ -102,3 +102,75 @@ async def test_events_recent_requires_key(engine) -> None:
     async with AsyncClient(transport=transport, base_url="http://testserver") as c:
         r = await c.get("/events/recent")
         assert r.status_code == 401
+
+
+# ---------- Project manual order (drag-to-reorder) ----------
+
+
+async def _mk_projects(client, names: list[str]) -> list[str]:
+    ids = []
+    for n in names:
+        r = await client.post("/projects", json={"name": n})
+        assert r.status_code == 201, r.text
+        ids.append(r.json()["id"])
+    return ids
+
+
+async def _order(client) -> list[str]:
+    r = await client.get("/projects")
+    assert r.status_code == 200
+    return [p["name"] for p in r.json()]
+
+
+async def test_new_projects_get_increasing_positions(client) -> None:
+    r0 = await client.post("/projects", json={"name": "A"})
+    r1 = await client.post("/projects", json={"name": "B"})
+    assert r0.json()["position"] == 0
+    assert r1.json()["position"] == 1
+    assert await _order(client) == ["A", "B"]
+
+
+async def test_reorder_by_position_moves_and_persists(client) -> None:
+    await _mk_projects(client, ["A", "B", "C"])
+    ids = {p["name"]: p["id"] for p in (await client.get("/projects")).json()}
+    # Move C to the front (position 0).
+    r = await client.post(f"/projects/{ids['C']}/reorder", json={"position": 0})
+    assert r.status_code == 200, r.text
+    assert r.json()["position"] == 0
+    assert await _order(client) == ["C", "A", "B"]
+    # Persisted across a fresh list.
+    assert await _order(client) == ["C", "A", "B"]
+
+
+async def test_reorder_by_direction(client) -> None:
+    await _mk_projects(client, ["A", "B", "C"])
+    ids = {p["name"]: p["id"] for p in (await client.get("/projects")).json()}
+    r = await client.post(f"/projects/{ids['A']}/reorder", json={"direction": "down"})
+    assert r.status_code == 200, r.text
+    assert await _order(client) == ["B", "A", "C"]
+    r = await client.post(f"/projects/{ids['C']}/reorder", json={"direction": "up"})
+    assert r.status_code == 200, r.text
+    assert await _order(client) == ["B", "C", "A"]
+
+
+async def test_reorder_position_clamps_out_of_range(client) -> None:
+    await _mk_projects(client, ["A", "B", "C"])
+    ids = {p["name"]: p["id"] for p in (await client.get("/projects")).json()}
+    r = await client.post(f"/projects/{ids['A']}/reorder", json={"position": 99})
+    assert r.status_code == 200, r.text
+    assert await _order(client) == ["B", "C", "A"]
+
+
+async def test_reorder_emits_event(client) -> None:
+    ids = await _mk_projects(client, ["A", "B"])
+    await client.post(f"/projects/{ids[1]}/reorder", json={"position": 0})
+    r = await client.get(f"/events/recent?project={ids[1]}&limit=20")
+    assert r.status_code == 200
+    assert any(e["kind"] == "project.reordered" for e in r.json())
+
+
+async def test_reorder_unknown_project_404(client) -> None:
+    import uuid
+
+    r = await client.post(f"/projects/{uuid.uuid4()}/reorder", json={"position": 0})
+    assert r.status_code == 404
