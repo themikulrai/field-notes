@@ -4,9 +4,16 @@ import type { VideoSlot as VideoSlotData } from "../lib/types";
 const FFMPEG_CMD =
   "ffmpeg -i in.mp4 -c:v libx264 -pix_fmt yuv420p -movflags +faststart out.mp4";
 
+// /media is baked into the Heroku image and data: URIs are inline — both stable.
+// Anything else is an external host whose connection can drop, so we flag it.
+function isStableVideoUrl(url: string): boolean {
+  return url.startsWith("/media") || url.includes("/media/") || url.startsWith("data:");
+}
+
 export function VideoSlot({ video }: { video: VideoSlotData }) {
   const [error, setError] = useState(false);
   const hasSource = !!(video.url && video.url.length > 0);
+  const external = hasSource && !isStableVideoUrl(video.url as string);
 
   return (
     <div className="video-slot">
@@ -51,6 +58,11 @@ export function VideoSlot({ video }: { video: VideoSlotData }) {
       <div className="video-meta">
         <span className="mono">{video.label}</span>
         <span className="mono dim">{video.duration}</span>
+        {external && (
+          <span className="video-external mono" title={video.url as string}>
+            ⚠ external — may drop
+          </span>
+        )}
       </div>
     </div>
   );

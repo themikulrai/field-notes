@@ -621,3 +621,49 @@ async def test_http_update_deepless_agent_is_allowed(client, project_id) -> None
     r = await client.patch(f"/cells/{c['id']}", json={"conclusion": "human note"})
     assert r.status_code == 200, r.text
     assert r.json()["conclusion"] == "human note"
+
+
+# ---------- Video URL guardrails (reject ephemeral tunnels on agent writes) ----------
+
+
+def _vid(url: str) -> dict:
+    return {"label": "clip", "duration": "0:05", "url": url}
+
+
+async def test_mcp_agent_video_ephemeral_url_rejected(client, project_id) -> None:
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "V", "deep": {"na": True}, "video": _vid("https://foo.trycloudflare.com/c.mp4")},
+        headers=MCP,
+    )
+    assert r.status_code == 422, r.text
+    assert "trycloudflare" in r.json()["detail"].lower()
+
+
+async def test_mcp_agent_video_media_url_ok(client, project_id) -> None:
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "V", "deep": {"na": True}, "video": _vid("/media/lb/clip.mp4")},
+        headers=MCP,
+    )
+    assert r.status_code == 201, r.text
+
+
+async def test_http_agent_video_ephemeral_url_allowed(client, project_id) -> None:
+    # The human (source=http) is never blocked.
+    r = await client.post(
+        f"/projects/{project_id}/cells",
+        json={"kind": "agent", "title": "V", "video": _vid("https://x.trycloudflare.com/c.mp4")},
+    )
+    assert r.status_code == 201, r.text
+
+
+async def test_mcp_update_setting_ephemeral_video_rejected(client, project_id) -> None:
+    c = await _create_cell(client, project_id, title="A", deep={"na": True})
+    r = await client.patch(
+        f"/cells/{c['id']}",
+        json={"video": _vid("https://x.ngrok.io/c.mp4")},
+        headers=MCP,
+    )
+    assert r.status_code == 422, r.text
+    assert "ngrok" in r.json()["detail"].lower()

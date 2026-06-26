@@ -392,10 +392,12 @@
   .video-play svg { background: var(--paper-2); border: 1px solid var(--ink-2); border-radius: 50%; padding: 10px; width: 44px; height: 44px; color: var(--ink); }
   .video-meta {
     position: relative; z-index: 1;
-    display: flex; justify-content: space-between; width: 100%;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
     padding: 8px 10px; font-size: 11px;
     background: linear-gradient(to top, color-mix(in oklch, var(--paper-2) 92%, transparent), transparent);
   }
+  /* Flag videos hosted off the stable /media path (external hosts can drop). */
+  .video-external { color: var(--c-amber); font-size: 10.5px; letter-spacing: 0.02em; white-space: nowrap; }
 
   .verdict {
     position: relative;

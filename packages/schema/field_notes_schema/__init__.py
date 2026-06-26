@@ -88,6 +88,10 @@ class VideoSlot(BaseModel):
     label: str
     duration: str
     url: str | None = None
+    # MIME type for the <source> element (e.g. "video/mp4"). The web defaults to
+    # "video/mp4" when absent; included here so the Python schema matches the TS
+    # type and round-trips it.
+    mime: str | None = None
 
 
 class DeepBlock(BaseModel):

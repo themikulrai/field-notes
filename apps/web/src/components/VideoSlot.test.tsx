@@ -66,4 +66,19 @@ describe("VideoSlot", () => {
     expect(screen.getByText("rollout seed 42")).toBeInTheDocument();
     expect(screen.getByText("0:12")).toBeInTheDocument();
   });
+
+  it("flags an external (non-/media) url as 'may drop'", () => {
+    render(<VideoSlot video={mk({ url: "https://example.com/clip.mp4" })} />);
+    expect(screen.getByText(/external — may drop/i)).toBeInTheDocument();
+  });
+
+  it("does NOT flag a /media-hosted url", () => {
+    render(<VideoSlot video={mk({ url: "/media/lb/clip.mp4" })} />);
+    expect(screen.queryByText(/external — may drop/i)).toBeNull();
+  });
+
+  it("does NOT flag an absolute herokuapp /media url", () => {
+    render(<VideoSlot video={mk({ url: "https://field-notes.herokuapp.com/media/lb/clip.mp4" })} />);
+    expect(screen.queryByText(/external — may drop/i)).toBeNull();
+  });
 });

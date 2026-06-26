@@ -157,6 +157,39 @@ def _enforce_agent_deep(deep: dict | None, source: str) -> None:
         )
 
 
+# Quick-tunnel hosts that expire and silently blank a video cell (the input-viewer
+# clips died this way more than once). Reject these on agent writes so a dead URL
+# never gets attached; agents should host clips under /media (baked into the
+# image) or behind a stable URL.
+_EPHEMERAL_VIDEO_HOSTS = (
+    "trycloudflare.com",
+    "ngrok.io",
+    "ngrok-free.app",
+    "ngrok.app",
+    "loca.lt",
+    "localhost.run",
+    "lhr.life",
+    "serveo.net",
+    "bore.pub",
+)
+
+
+def _validate_video_url(url: str | None, source: str) -> None:
+    """Reject known-ephemeral tunnel URLs on MCP-sourced writes. No-op for http."""
+    if source != "mcp" or not url:
+        return
+    low = url.lower()
+    for host in _EPHEMERAL_VIDEO_HOSTS:
+        if host in low:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"video.url uses an ephemeral tunnel host ({host}) — these expire and blank the "
+                    "cell. Host the clip under /media (baked into the image) or behind a stable URL."
+                ),
+            )
+
+
 async def _project_cells_ordered(session: AsyncSession, pid: uuid.UUID) -> list[Cell]:
     result = await session.execute(select(Cell).where(Cell.project_id == pid).order_by(Cell.position))
     return list(result.scalars().all())
@@ -202,6 +235,7 @@ async def create_cell(
     _validate_cell_payload(body)
     if body.kind == CellKind.agent:
         _enforce_agent_deep(body.deep.model_dump() if body.deep is not None else None, _source(request))
+        _validate_video_url(body.video.url if body.video is not None else None, _source(request))
 
     cells = await _project_cells_ordered(session, pid)
     if body.after_cell_id is None:
@@ -317,6 +351,9 @@ async def update_cell(
     # deep passes, and one that leaves it empty is rejected.
     if c.kind == CellKind.agent.value:
         _enforce_agent_deep(c.deep, _source(request))
+    # Reject an ephemeral video URL only when this write actually sets `video`.
+    if "video" in data:
+        _validate_video_url(c.video.get("url") if isinstance(c.video, dict) else None, _source(request))
     # Server-side invariant: any MCP-sourced edit re-opens the cell. Applies
     # after all field merges so it overrides any explicit `status` in the patch
     # as well as any "no status field at all" case. Verdict relationship is
