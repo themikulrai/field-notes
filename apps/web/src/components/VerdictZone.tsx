@@ -16,11 +16,19 @@ export function VerdictZone({ cell, onVerdict, onUnlock }: Props) {
   useEffect(() => setDraft(v?.note || ""), [cell.id, v?.note]);
 
   const has = !!v;
-  const state = v?.state ?? null;
+  // The EFFECTIVE verdict is the one consistent with the cell's status. A stored
+  // verdict can go stale: an agent edit re-opens the cell (status→"open") but
+  // leaves the verdict row, so status="open" + verdict="accept" coexist. Driving
+  // the buttons off `activeState` (not the raw stored `state`) means a blue/open
+  // cell never shows a solid-green "verified" button, and a single click
+  // re-confirms (rather than the old clear-then-reapply double-click).
+  const activeState: VerdictState | null =
+    cell.status === "verified" ? "accept" : cell.status === "rejected" ? "reject" : null;
+  const stale = has && activeState === null;
   const hasDraft = draft.trim().length > 0;
 
   const commit = (next: VerdictState) => {
-    onVerdict(next === state ? null : next, draft);
+    onVerdict(next === activeState ? null : next, draft);
   };
 
   if (cell.locked) {
@@ -50,10 +58,13 @@ export function VerdictZone({ cell, onVerdict, onUnlock }: Props) {
   }
 
   return (
-    <div className={`verdict ${has ? `verdict--${state}` : "verdict--empty"}`}>
+    <div className={`verdict ${activeState ? `verdict--${activeState}` : stale ? "verdict--stale" : "verdict--empty"}`}>
       <div className="verdict-tag">
         <span className="verdict-tag-label">HUMAN</span>
         {has && <span className="verdict-tag-time mono">{fmtAgo(v!.at)}</span>}
+        {stale && (
+          <span className="verdict-tag-stale mono">· changed since your verdict — re-confirm</span>
+        )}
       </div>
       <div className="verdict-body">
         <label className="verdict-label mono" htmlFor={`note-${cell.id}`}>
@@ -80,9 +91,9 @@ export function VerdictZone({ cell, onVerdict, onUnlock }: Props) {
           <div className="verdict-actions">
             <button
               type="button"
-              className={`vbtn vbtn--accept ${state === "accept" ? "is-on" : ""}`}
+              className={`vbtn vbtn--accept ${activeState === "accept" ? "is-on" : ""}`}
               onClick={() => commit("accept")}
-              aria-pressed={state === "accept"}
+              aria-pressed={activeState === "accept"}
             >
               <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                 <path
@@ -95,14 +106,14 @@ export function VerdictZone({ cell, onVerdict, onUnlock }: Props) {
                 />
               </svg>
               <span>
-                {state === "accept" ? "verified" : hasDraft ? "verify with comment" : "verify"}
+                {activeState === "accept" ? "verified" : hasDraft ? "verify with comment" : "verify"}
               </span>
             </button>
             <button
               type="button"
-              className={`vbtn vbtn--reject ${state === "reject" ? "is-on" : ""}`}
+              className={`vbtn vbtn--reject ${activeState === "reject" ? "is-on" : ""}`}
               onClick={() => commit("reject")}
-              aria-pressed={state === "reject"}
+              aria-pressed={activeState === "reject"}
             >
               <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                 <path
@@ -114,7 +125,7 @@ export function VerdictZone({ cell, onVerdict, onUnlock }: Props) {
                 />
               </svg>
               <span>
-                {state === "reject" ? "rejected" : hasDraft ? "reject with comment" : "reject"}
+                {activeState === "reject" ? "rejected" : hasDraft ? "reject with comment" : "reject"}
               </span>
             </button>
           </div>

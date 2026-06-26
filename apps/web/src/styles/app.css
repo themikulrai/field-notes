@@ -422,6 +422,12 @@
   }
   .verdict--accept { border-top-color: var(--c-green); }
   .verdict--reject { border-top-color: var(--c-red); }
+  /* Stale: a verdict exists but the cell was re-opened (edited) after it, so
+     status and verdict disagree. Signal "re-confirm" rather than showing it as
+     still verified/rejected. */
+  .verdict--stale { border-top-color: var(--c-amber); }
+  .verdict--stale .verdict-tag-label { border-color: var(--c-amber); color: var(--c-amber); background: color-mix(in oklch, var(--c-amber) 12%, var(--paper-2)); }
+  .verdict-tag-stale { font-size: 11px; color: var(--c-amber); letter-spacing: 0.02em; text-transform: none; font-family: var(--mono); }
   .verdict-tag {
     display: flex; flex-direction: column; align-items: flex-start;
     padding-top: 4px; gap: 6px;
