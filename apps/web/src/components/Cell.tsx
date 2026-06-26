@@ -46,6 +46,10 @@ export function Cell({
 
   const toggleCollapse = onToggleCollapse ?? (() => {});
   const handleHeadKey = (e: KeyboardEvent) => {
+    // Ignore keys originating from an inline editor in the header (e.g. typing
+    // a space in the title input) — they must not collapse the cell.
+    const tag = (e.target as HTMLElement | null)?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
     if (e.key !== "Enter" && e.key !== " ") return;
     e.preventDefault();
     toggleCollapse();

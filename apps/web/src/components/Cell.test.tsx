@@ -146,6 +146,51 @@ describe("Cell", () => {
     expect(screen.getByLabelText("edit title")).toBeInTheDocument();
   });
 
+  it("pressing Space while editing the title does NOT toggle collapse", () => {
+    // Regression: the header div listens for Space to collapse; the title input
+    // must stopPropagation so typing a space inserts a space instead of
+    // collapsing the cell (previously the user had to type "i-am-mikul").
+    const toggle = vi.fn();
+    render(
+      <Cell
+        cell={mkCell()}
+        index={0}
+        total={1}
+        onToggleCollapse={toggle}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    fireEvent.doubleClick(screen.getByText("run 4"));
+    const input = screen.getByLabelText("edit title");
+    fireEvent.keyDown(input, { key: " " });
+    expect(toggle).not.toHaveBeenCalled();
+  });
+
+  it("clicking into the title input does NOT toggle collapse", () => {
+    const toggle = vi.fn();
+    render(
+      <Cell
+        cell={mkCell()}
+        index={0}
+        total={1}
+        onToggleCollapse={toggle}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    fireEvent.doubleClick(screen.getByText("run 4"));
+    const input = screen.getByLabelText("edit title");
+    fireEvent.click(input);
+    expect(toggle).not.toHaveBeenCalled();
+  });
+
   it("saving the title calls onChange with { title }", () => {
     const onChange = vi.fn();
     render(

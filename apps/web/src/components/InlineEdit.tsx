@@ -78,6 +78,9 @@ export function InlineEdit({
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
+          // Stop every keystroke from reaching ancestor key handlers (e.g. the
+          // cell header's Space/Enter collapse toggle) while editing.
+          e.stopPropagation();
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
             e.preventDefault();
             commit();
@@ -86,6 +89,10 @@ export function InlineEdit({
             cancel();
           }
         }}
+        // Clicking to place the cursor must not bubble to a parent collapse
+        // toggle (which would collapse the cell mid-edit).
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
         onBlur={commit}
       />
     );
@@ -101,6 +108,9 @@ export function InlineEdit({
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onKeyDown={(e) => {
+        // Stop every keystroke (notably Space) from bubbling to the cell
+        // header's collapse toggle; otherwise typing a space collapses the cell.
+        e.stopPropagation();
         if (e.key === "Enter") {
           e.preventDefault();
           commit();
@@ -109,6 +119,9 @@ export function InlineEdit({
           cancel();
         }
       }}
+      // Clicking to place the cursor must not bubble to a parent collapse toggle.
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       onBlur={commit}
     />
   );
