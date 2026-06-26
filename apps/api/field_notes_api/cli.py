@@ -74,10 +74,16 @@ def build_serve_env(
     return env
 
 
+def _package_dir() -> Path:
+    """Directory of the installed field_notes_api package (where _web/ and
+    _alembic/ are bundled in a wheel). Indirected so tests can point elsewhere."""
+    return Path(__file__).resolve().parent
+
+
 def _find_alembic() -> tuple[Path, Path]:
     """Return (alembic.ini, script_location). Works from the source tree and
     from a wheel where the migrations are bundled under the package as _alembic/."""
-    pkg = Path(__file__).resolve().parent
+    pkg = _package_dir()
     candidates = [
         (pkg / "_alembic" / "alembic.ini", pkg / "_alembic" / "alembic"),  # packaged
         (pkg.parent / "alembic.ini", pkg.parent / "alembic"),  # source: apps/api/
@@ -107,7 +113,7 @@ def resolve_static_dir() -> str | None:
     explicit = os.environ.get("FIELD_NOTES_STATIC_DIR")
     if explicit:
         return explicit
-    packaged = Path(__file__).resolve().parent / "_web"
+    packaged = _package_dir() / "_web"
     if (packaged / "index.html").is_file():
         return str(packaged)
     return None
