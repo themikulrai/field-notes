@@ -5,7 +5,7 @@
 import { useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { Cell as CellData, VerdictState } from "../lib/types";
-import { statusMeta, fmtAgo } from "../lib/format";
+import { statusMeta } from "../lib/format";
 import { StatusBadge } from "./StatusBadge";
 import { MetricRow } from "./MetricRow";
 import { VideoSlot } from "./VideoSlot";
@@ -76,9 +76,7 @@ export function Cell({
             <StatusBadge status={status} />
             {locked && <span className="locked-chip">LOCKED</span>}
             <span className="mono dim sep">·</span>
-            <span className="mono dim">{cell.agent_id || "agent"}</span>
-            <span className="mono dim sep">·</span>
-            <span className="mono dim">updated {fmtAgo(cell.updated_at)}</span>
+            <span className="mono dim">agent</span>
           </div>
           <h2 className="cell-title">
             <span className="cell-collapse-chevron" aria-hidden="true">

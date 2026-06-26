@@ -1,14 +1,12 @@
 import type { CellStatus } from "../lib/types";
-import { STATUSES, STATUS_ORDER } from "../lib/format";
+import { statusMeta, STATUS_ORDER } from "../lib/format";
 import type { CSSProperties } from "react";
 
 interface Props {
+  title: string;
   filter: "all" | CellStatus;
   counts: Record<"all" | CellStatus, number>;
   onSetFilter: (f: "all" | CellStatus) => void;
-  onAddMarkdown: () => void;
-  onAddEmpty: () => void;
-  onAddSection: () => void;
 }
 
 function FilterPill({
@@ -22,7 +20,7 @@ function FilterPill({
   count: number;
   onClick: () => void;
 }) {
-  const meta = id === "all" ? { label: "all", color: "var(--ink)" } : STATUSES[id];
+  const meta = id === "all" ? { label: "all", color: "var(--ink)" } : statusMeta(id);
   return (
     <button
       className={`pill ${active ? "is-active" : ""}`}
@@ -37,9 +35,13 @@ function FilterPill({
   );
 }
 
-export function FilterBar({ filter, counts, onSetFilter, onAddMarkdown, onAddEmpty, onAddSection }: Props) {
+// Slim header row: the active project's name on the left, the status filter
+// pills on the right. The "open" pill count is the only place open-cell counts
+// are surfaced now (the old "awaiting you" stat was a duplicate).
+export function FilterBar({ title, filter, counts, onSetFilter }: Props) {
   return (
     <div className="filter-bar">
+      <h1 className="filter-title">{title}</h1>
       <div className="filter-pills">
         <FilterPill
           id="all"
@@ -57,53 +59,6 @@ export function FilterBar({ filter, counts, onSetFilter, onAddMarkdown, onAddEmp
             onClick={() => onSetFilter(k)}
           />
         ))}
-      </div>
-      <div className="filter-actions">
-        <button
-          className="ghost-btn mono"
-          onClick={onAddMarkdown}
-          type="button"
-          title="add markdown note"
-        >
-          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-            <path
-              d="M2 4h12v8H2z M2 8h12 M5 6v4 M5 10l2-2 2 2"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.3"
-            />
-          </svg>
-          add note
-        </button>
-        <button className="ghost-btn mono" onClick={onAddEmpty} type="button">
-          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-            <path
-              d="M8 3v10M3 8h10"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
-          add cell
-        </button>
-        <button
-          className="ghost-btn mono"
-          onClick={onAddSection}
-          type="button"
-          title="add a collapsible section heading"
-        >
-          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-            <path
-              d="M2 4h12 M2 8h9 M2 12h6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-          add section
-        </button>
       </div>
     </div>
   );

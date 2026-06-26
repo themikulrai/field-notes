@@ -44,12 +44,6 @@ function ProjectTab({
         <div className="ptab-name">{project.name}</div>
         <div className="ptab-meta">
           <span className="ptab-counts mono">
-            {c.in_progress > 0 && (
-              <span className="ptab-pip" title={`${c.in_progress} in progress`}>
-                <span className="pip-dot pip-amber pulse" />
-                {c.in_progress}
-              </span>
-            )}
             {c.open > 0 && (
               <span className="ptab-pip" title={`${c.open} awaiting review`}>
                 <span className="pip-dot pip-blue" />
@@ -68,7 +62,7 @@ function ProjectTab({
                 {c.rejected}
               </span>
             )}
-            {c.in_progress === 0 && c.open === 0 && c.verified === 0 && c.rejected === 0 && (
+            {c.open === 0 && c.verified === 0 && c.rejected === 0 && (
               <span className="ptab-pip dim">
                 <span className="pip-dot pip-rest" />0
               </span>

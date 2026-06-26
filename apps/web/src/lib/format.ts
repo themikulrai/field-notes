@@ -12,15 +12,11 @@ export function fmtAgo(iso: string | null | undefined): string {
   return `${d}d ago`;
 }
 
+// Note: "in_progress" is intentionally NOT a UI status. It is never set in
+// practice (every MCP write pins status to "open"), so it has no pill/badge.
+// The backend enum + DB CHECK still permit it and statusMeta() falls back to
+// "open" for it, so any legacy/stray row stays loadable.
 export const STATUSES = {
-  in_progress: {
-    label: "in progress",
-    short: "running",
-    color: "var(--c-amber)",
-    bg: "var(--c-amber-bg)",
-    rail: "var(--c-amber)",
-    dotAnim: true,
-  },
   open: {
     label: "open",
     short: "needs review",
@@ -47,7 +43,7 @@ export const STATUSES = {
   },
 } as const;
 
-export const STATUS_ORDER = ["in_progress", "open", "verified", "rejected"] as const;
+export const STATUS_ORDER = ["open", "verified", "rejected"] as const;
 
 export type StatusMeta = (typeof STATUSES)[keyof typeof STATUSES];
 

@@ -31,8 +31,8 @@ describe("ProjectTabStrip", () => {
         onAdd={() => {}}
       />,
     );
-    // Alpha shows 2 in-progress and 3 awaiting review.
-    expect(screen.getByTitle("2 in progress")).toBeTruthy();
+    // Alpha shows 3 awaiting review. in_progress is no longer surfaced.
+    expect(screen.queryByTitle(/in progress/)).toBeNull();
     expect(screen.getByTitle("3 awaiting review")).toBeTruthy();
     // Beta has all zeros => dim rest pip rendered once.
     const restPips = screen.getAllByText("0");

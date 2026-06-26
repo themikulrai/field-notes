@@ -1,11 +1,10 @@
-// Top-level layout: tabs + brand + stats + filter + cells list (with sections).
+// Top-level layout: project tabs + slim title/filter row + cells list (sections).
 // Wires the store; the live-events hook re-fetches/patches state from SSE.
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "./lib/store";
 import { useLiveEvents } from "./lib/live";
 import { getApiKey } from "./lib/api";
-import { fmtAgo } from "./lib/format";
 import { inferSections, lastCellId, type SectionNode } from "./lib/sections";
 
 import { KeyGate } from "./components/KeyGate";
@@ -48,9 +47,6 @@ function Main() {
   const toggleCell = useStore((s) => s.toggleCell);
   const deleteCell = useStore((s) => s.deleteCell);
   const updateCell = useStore((s) => s.updateCell);
-  const addMarkdownCell = useStore((s) => s.addMarkdownCell);
-  const addEmptyCell = useStore((s) => s.addEmptyCell);
-  const addSectionCell = useStore((s) => s.addSectionCell);
   const addMarkdownCellAfter = useStore((s) => s.addMarkdownCellAfter);
   const addEmptyCellAfter = useStore((s) => s.addEmptyCellAfter);
   const addSectionCellAfter = useStore((s) => s.addSectionCellAfter);
@@ -160,9 +156,6 @@ function Main() {
       </div>
     );
   }
-
-  const inProgress = counts.in_progress;
-  const awaiting = counts.open;
 
   // index/total for the row-level up/down reorder buttons come from the
   // FLAT visibleCells array (see flatIndex above), not from each node's
@@ -278,49 +271,11 @@ function Main() {
             void createProject(name);
           }}
         />
-        <div className="top-inner">
-          <div className="brand">
-            <div className="brand-mark" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="22" height="22">
-                <rect x="3" y="3" width="18" height="18" rx="1" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" strokeWidth="1" />
-                <line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1" />
-                <line x1="9" y1="3" x2="9" y2="21" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-                <circle cx="6" cy="6" r="0.8" fill="currentColor" />
-              </svg>
-            </div>
-            <div className="brand-text">
-              <div className="brand-name">Field Notes</div>
-              <div className="brand-sub mono">
-                {activeProject.name}
-                {activeProject.subtitle ? ` · ${activeProject.subtitle}` : ""}
-              </div>
-            </div>
-          </div>
-          <div className="top-stats">
-            <div className="stat">
-              <span className="stat-dot" style={{ background: "var(--c-amber)" }} />
-              <span className="stat-num">{inProgress}</span>
-              <span className="stat-lbl mono">agents working</span>
-            </div>
-            <div className="stat">
-              <span className="stat-dot" style={{ background: "var(--c-blue)" }} />
-              <span className="stat-num">{awaiting}</span>
-              <span className="stat-lbl mono">awaiting you</span>
-            </div>
-            <div className="stat">
-              <span className="stat-lbl mono dim">last sync</span>
-              <span className="stat-num small mono">{fmtAgo(activeProject.updated_at)}</span>
-            </div>
-          </div>
-        </div>
         <FilterBar
+          title={activeProject.name}
           filter={filter}
           counts={counts}
           onSetFilter={setFilter}
-          onAddMarkdown={() => void addMarkdownCell(activeProject.id, 0)}
-          onAddEmpty={() => void addEmptyCell(activeProject.id, 0)}
-          onAddSection={() => void addSectionCell(activeProject.id, 0)}
         />
       </header>
 
@@ -347,7 +302,7 @@ function Main() {
       </div>
 
       <footer className="foot mono">
-        <span>field notes · local working copy</span>
+        <span>local working copy</span>
         {activeProject.repo && <span className="dim">{activeProject.repo}</span>}
       </footer>
     </div>

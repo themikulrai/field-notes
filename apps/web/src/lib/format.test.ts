@@ -4,13 +4,14 @@ import { statusMeta, STATUSES } from "./format";
 describe("statusMeta", () => {
   it("returns the matching metadata for known statuses", () => {
     expect(statusMeta("verified")).toBe(STATUSES.verified);
-    expect(statusMeta("in_progress")).toBe(STATUSES.in_progress);
     expect(statusMeta("rejected")).toBe(STATUSES.rejected);
     expect(statusMeta("open")).toBe(STATUSES.open);
   });
 
-  it("falls back to 'open' for the deprecated 'ready' status", () => {
+  it("falls back to 'open' for the deprecated/never-used statuses (ready, in_progress)", () => {
     expect(statusMeta("ready")).toBe(STATUSES.open);
+    // in_progress is no longer a UI status; it degrades to the open presentation.
+    expect(statusMeta("in_progress")).toBe(STATUSES.open);
   });
 
   it("falls back to 'open' for unknown / null / undefined", () => {
