@@ -150,6 +150,47 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_add_media(args: argparse.Namespace) -> int:
+    from . import media
+
+    media_root = Path(args.data_dir).expanduser() / "media"
+    results = media.add_media([Path(p) for p in args.files], task=args.task, media_root=media_root)
+    for url, status in results:
+        print(f"{status:8} {url}")
+    return 0
+
+
+def _cmd_verify_media(args: argparse.Namespace) -> int:
+    import sqlite3
+
+    from . import media
+
+    data_dir = Path(args.data_dir).expanduser()
+    db = data_dir / "field-notes.db"
+    media_root = data_dir / "media"
+    if not db.is_file():
+        print(f"no database at {db}")
+        return 1
+
+    refs: set[str] = set()
+    con = sqlite3.connect(db)
+    try:
+        for row in con.execute("SELECT video, body, visual, deep FROM cells"):
+            blob = " ".join(str(c) for c in row if c is not None)
+            refs |= media.collect_media_refs(blob)
+    finally:
+        con.close()
+
+    missing = media.missing_media(media_root, refs)
+    if missing:
+        print(f"{len(missing)} referenced media file(s) MISSING from {media_root}:")
+        for m in missing:
+            print(f"  {m}")
+        return 1
+    print(f"all {len(refs)} referenced /media path(s) present in {media_root}")
+    return 0
+
+
 def _cmd_info(args: argparse.Namespace) -> int:
     data_dir = Path(args.data_dir).expanduser()
     print(f"data dir:    {data_dir}")
@@ -170,6 +211,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_serve.add_argument("--key", default=None, help="require this API key (else loopback runs keyless)")
     p_serve.add_argument("--no-browser", action="store_true", help="don't open a browser tab")
     p_serve.set_defaults(func=_cmd_serve)
+
+    p_addm = sub.add_parser("add-media", help="copy media files into the managed media root")
+    p_addm.add_argument("files", nargs="+", help="media files to copy in")
+    p_addm.add_argument("--task", required=True, help="subfolder under media/ (the <task> in /media/<task>/...)")
+    p_addm.add_argument("--data-dir", default=DEFAULT_DATA_DIR)
+    p_addm.set_defaults(func=_cmd_add_media)
+
+    p_vfy = sub.add_parser("verify-media", help="report cell media URLs missing from the media root")
+    p_vfy.add_argument("--data-dir", default=DEFAULT_DATA_DIR)
+    p_vfy.set_defaults(func=_cmd_verify_media)
 
     p_info = sub.add_parser("info", help="print resolved local paths")
     p_info.add_argument("--data-dir", default=DEFAULT_DATA_DIR)
