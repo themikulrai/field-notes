@@ -4,6 +4,55 @@ ML research notebook with MCP-driven agents. Cells (agent, markdown, empty) live
 inside projects; humans verify / reject / lock; agents push results via the MCP
 server and observe what the human did.
 
+## Run it yourself (local, no setup)
+
+One command — needs only [uv](https://docs.astral.sh/uv/). No Node, no Docker,
+no database server:
+
+```bash
+uvx --from git+https://github.com/themikulrai/field-notes field-notes serve
+```
+
+This creates `~/.field-notes/` (a SQLite DB + a `media/` folder), runs the
+migrations, and opens the notebook at <http://127.0.0.1:8000>. **Your data is
+that one folder** — back it up by copying it. It binds to loopback with auth
+disabled, so there's no key to manage; to expose it on a network pass
+`--host 0.0.0.0 --key <secret>`.
+
+Point an MCP host (Claude Code, etc.) at the local API. The `local` key is a
+throwaway — the loopback server ignores it:
+
+```json
+{
+  "mcpServers": {
+    "field-notes": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/themikulrai/field-notes", "field-notes-mcp"],
+      "env": { "FIELD_NOTES_API_URL": "http://127.0.0.1:8000", "FIELD_NOTES_KEY": "local" }
+    }
+  }
+}
+```
+
+### Bring your existing notes (no data loss)
+
+Migrate a hosted instance into your local copy. It's a **copy** — the source
+DB is never written:
+
+```bash
+# 1. copy projects / cells / verdicts / events (preserves IDs + links)
+field-notes import-db --source "postgres://…your DATABASE_URL…"
+# 2. download the baked media tarballs so /media/... references resolve
+field-notes fetch-media
+# 3. report any media a cell references but the local copy is missing
+field-notes verify-media
+# 4. open it
+field-notes serve
+```
+
+If you outgrow SQLite (heavy parallel agent writes), point at Postgres with the
+same code: `DATABASE_URL=postgres://… field-notes serve`.
+
 ## Architecture
 
 ```
