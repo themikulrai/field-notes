@@ -5,6 +5,13 @@
 # If the server is down (crash, reboot, never started) it relaunches it detached.
 # A lock prevents racing launches; crash output is kept in server.log so a real
 # bug stays visible instead of being silently resurrected.
+#
+# NOTE on networked-home machines (e.g. AFS): cron's $HOME comes from getpwuid
+# and may differ from your interactive $HOME (and be unreadable without a token).
+# Set FIELD_NOTES_DATA_DIR (and ideally HOME) to an absolute, always-readable
+# path in the crontab so the lock/db/media don't land on an inaccessible home:
+#   HOME=/abs/home
+#   FIELD_NOTES_DATA_DIR=/abs/home/.field-notes
 set -u
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$HOME/.local/bin"
 
