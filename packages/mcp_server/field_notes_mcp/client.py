@@ -16,11 +16,11 @@ from typing import Any
 
 import httpx
 from field_notes_schema import (
+    AppendSandboxBody,
     CellCreate,
     CellRead,
     CellUpdate,
     EventEnvelope,
-    AppendSandboxBody,
     PatchVisualSandboxRequest,
     ProjectCreate,
     ProjectRead,

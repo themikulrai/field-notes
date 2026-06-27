@@ -120,9 +120,7 @@ class UpdateProjectInput(BaseModel):
         if not flat_present:
             return data
         if "patch" in data:
-            raise ValueError(
-                "ambiguous update: provide either nested `patch={...}` OR flat fields, not both"
-            )
+            raise ValueError("ambiguous update: provide either nested `patch={...}` OR flat fields, not both")
         rest = {k: v for k, v in data.items() if k not in patch_fields}
         rest["patch"] = flat_present
         return rest
@@ -191,9 +189,7 @@ class UpdateCellInput(BaseModel):
         if not flat_present:
             return data
         if "patch" in data:
-            raise ValueError(
-                "ambiguous update: provide either nested `patch={...}` OR flat fields, not both"
-            )
+            raise ValueError("ambiguous update: provide either nested `patch={...}` OR flat fields, not both")
         rest = {k: v for k, v in data.items() if k not in patch_fields}
         rest["patch"] = flat_present
         return rest

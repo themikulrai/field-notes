@@ -341,9 +341,7 @@ def test_update_cell_both_flat_and_nested_rejected() -> None:
 
     cid = uuid.uuid4()
     with pytest.raises(Exception):  # noqa: B017
-        T.UpdateCellInput.model_validate(
-            {"cell_id": str(cid), "patch": {"conclusion": "a"}, "conclusion": "b"}
-        )
+        T.UpdateCellInput.model_validate({"cell_id": str(cid), "patch": {"conclusion": "a"}, "conclusion": "b"})
 
 
 def test_update_project_accepts_flat_args() -> None:
@@ -409,6 +407,4 @@ def test_update_project_both_flat_and_nested_rejected() -> None:
 
     pid = uuid.uuid4()
     with pytest.raises(Exception):  # noqa: B017
-        T.UpdateProjectInput.model_validate(
-            {"project_id": str(pid), "patch": {"name": "a"}, "name": "b"}
-        )
+        T.UpdateProjectInput.model_validate({"project_id": str(pid), "patch": {"name": "a"}, "name": "b"})

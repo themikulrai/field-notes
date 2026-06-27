@@ -10,10 +10,11 @@ connected clients.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from field_notes_schema import EventEnvelope
 
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class EventBus:
@@ -53,15 +54,14 @@ class EventBus:
             except asyncio.QueueEmpty:
                 break
         logger.warning(
-            "events_bus: subscriber queue full; dropped %d pending event(s) and emitted resync sentinel (subscriber=%s)",
+            "events_bus: subscriber queue full; dropped %d pending event(s) and "
+            "emitted resync sentinel (subscriber=%s)",
             dropped,
             id(q),
         )
         # Queue is now empty; this put_nowait cannot raise QueueFull.
-        try:
+        with contextlib.suppress(asyncio.QueueFull):  # pragma: no cover — defensive
             q.put_nowait(self._resync_msg())
-        except asyncio.QueueFull:  # pragma: no cover — defensive
-            pass
 
     async def publish(self, env: EventEnvelope) -> None:
         msg = env.model_dump_json()

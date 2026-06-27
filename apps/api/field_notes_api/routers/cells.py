@@ -251,9 +251,7 @@ async def create_cell(
     # the cell, regardless of what `body.status` (or kind) wanted. This is the
     # invariant; cell status reflects review state, not agent self-reporting.
     status_value: str | None
-    if _source(request) == "mcp":
-        status_value = CellStatus.open.value
-    elif body.kind == CellKind.empty:
+    if _source(request) == "mcp" or body.kind == CellKind.empty:
         status_value = CellStatus.open.value
     else:
         status_value = body.status.value if body.status is not None else None
@@ -403,8 +401,7 @@ async def patch_visual_sandbox(
         raise HTTPException(
             status_code=422,
             detail=(
-                f"`find` appears {actual} time(s) in visual.sandbox.{body.target}, "
-                f"expected_count={body.expected_count}"
+                f"`find` appears {actual} time(s) in visual.sandbox.{body.target}, expected_count={body.expected_count}"
             ),
         )
     new_visual = dict(c.visual)

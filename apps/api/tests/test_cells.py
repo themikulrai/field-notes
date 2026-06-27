@@ -241,6 +241,7 @@ async def test_patch_sandbox_rejects_missing_find(client, project_id) -> None:
 
 async def test_patch_sandbox_404_on_unknown_cell(client) -> None:
     import uuid as _u
+
     r = await client.post(
         f"/cells/{_u.uuid4()}/visual-sandbox/patch",
         json={"target": "html", "find": "x", "replace": "y"},
@@ -250,7 +251,9 @@ async def test_patch_sandbox_404_on_unknown_cell(client) -> None:
 
 async def test_patch_sandbox_422_on_non_sandbox_visual(client, project_id) -> None:
     c = await _create_cell(
-        client, project_id, title="S",
+        client,
+        project_id,
+        title="S",
         visual={"kind": "svg", "source": "<svg/>"},
     )
     r = await client.post(
@@ -276,7 +279,11 @@ async def test_patch_sandbox_locked_returns_409(client, project_id) -> None:
 async def test_patch_visual_preserves_unspecified_sandbox_fields(client, project_id) -> None:
     """PATCH /cells/{id} with only `html` must not clobber existing js/css."""
     c = await _create_sandbox(
-        client, project_id, html="<h1>orig</h1>", js="console.log('j')", css="body{}",
+        client,
+        project_id,
+        html="<h1>orig</h1>",
+        js="console.log('j')",
+        css="body{}",
     )
     r = await client.patch(
         f"/cells/{c['id']}",
@@ -292,7 +299,11 @@ async def test_patch_visual_preserves_unspecified_sandbox_fields(client, project
 async def test_patch_visual_replaces_on_kind_change(client, project_id) -> None:
     """Switching kind (sandbox -> svg) must replace fully, not merge."""
     c = await _create_sandbox(
-        client, project_id, html="<h1>h</h1>", js="j", css="c",
+        client,
+        project_id,
+        html="<h1>h</h1>",
+        js="j",
+        css="c",
     )
     r = await client.patch(
         f"/cells/{c['id']}",
@@ -310,7 +321,11 @@ async def test_patch_visual_empty_string_does_not_overwrite(client, project_id) 
     """Explicit "" is the schema default and indistinguishable from unset;
     must NOT clobber existing content."""
     c = await _create_sandbox(
-        client, project_id, html="<h1>keep</h1>", js="keepjs", css="keepcss",
+        client,
+        project_id,
+        html="<h1>keep</h1>",
+        js="keepjs",
+        css="keepcss",
     )
     r = await client.patch(
         f"/cells/{c['id']}",
@@ -376,7 +391,9 @@ async def test_append_initializes_visual_if_none(client, project_id) -> None:
 
 async def test_append_rejects_kind_change(client, project_id) -> None:
     c = await _create_cell(
-        client, project_id, title="S",
+        client,
+        project_id,
+        title="S",
         visual={"kind": "svg", "source": "<svg/>"},
     )
     r = await client.post(
@@ -464,9 +481,7 @@ async def test_create_http_status_passes_through(client, project_id) -> None:
     assert r.json()["status"] == "rejected"
 
 
-async def test_patch_mcp_status_forced_open_even_when_body_says_verified(
-    client, project_id
-) -> None:
+async def test_patch_mcp_status_forced_open_even_when_body_says_verified(client, project_id) -> None:
     # Seed cell + verdict (so we can confirm verdict relationship is untouched).
     c = await _create_cell(client, project_id, title="A", deep={"na": True})
     vr = await client.post(f"/cells/{c['id']}/verdict", json={"state": "accept", "note": "ok"})
@@ -633,7 +648,12 @@ def _vid(url: str) -> dict:
 async def test_mcp_agent_video_ephemeral_url_rejected(client, project_id) -> None:
     r = await client.post(
         f"/projects/{project_id}/cells",
-        json={"kind": "agent", "title": "V", "deep": {"na": True}, "video": _vid("https://foo.trycloudflare.com/c.mp4")},
+        json={
+            "kind": "agent",
+            "title": "V",
+            "deep": {"na": True},
+            "video": _vid("https://foo.trycloudflare.com/c.mp4"),
+        },
         headers=MCP,
     )
     assert r.status_code == 422, r.text

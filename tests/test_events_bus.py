@@ -5,18 +5,17 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
-from field_notes_schema import EventEnvelope
-
 from field_notes_api.events_bus import EventBus
+from field_notes_schema import EventEnvelope
 
 
 def _make_env(kind: str = "cell.updated") -> EventEnvelope:
     return EventEnvelope(
         id=uuid.uuid4(),
-        at=datetime.now(timezone.utc),
+        at=datetime.now(UTC),
         kind=kind,
         project_id=None,
         cell_id=None,

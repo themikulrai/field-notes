@@ -15,14 +15,13 @@ import asyncio
 import json
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from field_notes_schema import EventEnvelope
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
-
-from datetime import UTC, datetime
 
 from ..auth import SSE_TOKEN_TTL_SECONDS, mint_sse_token, require_api_key, require_api_key_query
 from ..config import get_settings

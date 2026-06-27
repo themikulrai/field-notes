@@ -106,9 +106,7 @@ async def require_api_key_query(
         if hmac.compare_digest(key, expected):
             global _warned_raw_key
             if not _warned_raw_key:
-                logger.warning(
-                    "DEPRECATED: /events ?key= used; switch to POST /sse-token + ?token=."
-                )
+                logger.warning("DEPRECATED: /events ?key= used; switch to POST /sse-token + ?token=.")
                 _warned_raw_key = True
             return
     raise HTTPException(

@@ -19,7 +19,6 @@ import urllib.request
 from pathlib import Path
 
 from sqlalchemy import func, select, text
-
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -94,8 +93,7 @@ async def import_db(source_url: str, dest_url: str, *, overwrite: bool = False) 
                 if existing:
                     if not overwrite:
                         raise RuntimeError(
-                            f"dest table {table.name} is not empty ({existing} rows); "
-                            "pass overwrite=True to replace"
+                            f"dest table {table.name} is not empty ({existing} rows); pass overwrite=True to replace"
                         )
                     await dc.execute(table.delete())
             # Copy forward (parent→child).
