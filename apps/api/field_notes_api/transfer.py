@@ -20,10 +20,14 @@ from pathlib import Path
 
 from sqlalchemy import func, select, text
 
+from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import create_async_engine
+
 from .db import _build_engine
 from .models import Base
 
 _TARBALL_URL = re.compile(r"https://\S+?\.tar\.gz")
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "", None}
 
 
 def _to_async_url(url: str) -> str:
@@ -35,6 +39,24 @@ def _to_async_url(url: str) -> str:
     if url.startswith("sqlite://") and "+aiosqlite" not in url:
         return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
     return url
+
+
+def _needs_ssl(async_url: str) -> bool:
+    """Remote Postgres (Heroku/RDS) requires TLS; loopback/SQLite does not."""
+    if not async_url.startswith("postgresql"):
+        return False
+    return make_url(async_url).host not in _LOCAL_HOSTS
+
+
+def _engine_for(url: str):
+    """Engine for a transfer endpoint. SQLite reuses the app's _build_engine
+    (WAL/FK pragmas); remote Postgres adds asyncpg TLS (Heroku won't connect
+    without it)."""
+    async_url = _to_async_url(url)
+    if async_url.startswith("sqlite"):
+        return _build_engine(async_url)
+    connect_args = {"ssl": "require"} if _needs_ssl(async_url) else {}
+    return create_async_engine(async_url, future=True, pool_pre_ping=True, connect_args=connect_args)
 
 
 async def _read_revision(conn) -> str | None:  # noqa: ANN001 — AsyncConnection
@@ -50,8 +72,8 @@ async def import_db(source_url: str, dest_url: str, *, overwrite: bool = False) 
     Raises if the two DBs are at different Alembic revisions (column drift would
     silently drop data) or if dest is non-empty and overwrite is False.
     """
-    src = _build_engine(_to_async_url(source_url))
-    dst = _build_engine(_to_async_url(dest_url))
+    src = _engine_for(source_url)
+    dst = _engine_for(dest_url)
     try:
         async with src.connect() as sc:
             src_rev = await _read_revision(sc)

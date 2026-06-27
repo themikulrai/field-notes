@@ -94,6 +94,39 @@ async def test_import_db_guards_nonempty_dest(tmp_path):
     assert counts["projects"] == 1  # overwrite replaces, not appends
 
 
+# --- remote Postgres needs TLS (Heroku/RDS) -------------------------------
+
+
+def test_needs_ssl_true_for_remote_postgres():
+    assert transfer._needs_ssl("postgresql+asyncpg://u:p@abc.rds.amazonaws.com:5432/db") is True
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "postgresql+asyncpg://u:p@localhost:5432/db",
+        "postgresql+asyncpg://u:p@127.0.0.1:5432/db",
+        "sqlite+aiosqlite:///x.db",
+    ],
+)
+def test_needs_ssl_false_for_local_or_sqlite(url):
+    assert transfer._needs_ssl(url) is False
+
+
+def test_engine_for_remote_postgres_sets_ssl(monkeypatch):
+    captured = {}
+
+    def fake_create(url, **kw):
+        captured["url"] = str(url)
+        captured["connect_args"] = kw.get("connect_args")
+        return "engine"
+
+    monkeypatch.setattr(transfer, "create_async_engine", fake_create)
+    transfer._engine_for("postgres://u:p@host.rds.amazonaws.com:5432/db")
+    assert captured["connect_args"] == {"ssl": "require"}
+    assert captured["url"].startswith("postgresql+asyncpg://")
+
+
 # --- media tarball URL parsing --------------------------------------------
 
 
