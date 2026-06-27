@@ -33,9 +33,11 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install uv
-        run: pip install uv==0.5.*
+        run: pip install "uv==0.11.*"
       - name: uv sync
-        run: uv sync --frozen --all-extras
+        # --all-packages --all-groups so each workspace member's dev group
+        # (ruff, pytest, aiosqlite) is installed, not just the root project.
+        run: uv sync --frozen --all-extras --all-packages --all-groups
       - name: ruff check
         run: uv run ruff check .
       - name: ruff format --check
@@ -63,23 +65,3 @@ jobs:
         run: npm run test
       - name: vite build
         run: npm run build
-
-  deploy:
-    # Only run on direct push to main and only if the deploy token is configured.
-    # Forks / PR builds don't have access to secrets so this skips automatically.
-    needs: [backend, frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    concurrency: deploy-${{ github.ref }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - name: Ensure FLY_API_TOKEN is set
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          if [ -z "$FLY_API_TOKEN" ]; then
-            echo "FLY_API_TOKEN is not set; skipping deploy. Add the secret to enable."
-            exit 0
-          fi
-          flyctl deploy --config deploy/fly.toml --remote-only

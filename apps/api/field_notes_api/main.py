@@ -27,6 +27,7 @@ class _RevalidateStaticFiles(StaticFiles):
         response.headers["Cache-Control"] = "no-cache"
         return response
 
+
 settings = get_settings()
 
 app = FastAPI(title="Field Notes API", version="0.1.0")

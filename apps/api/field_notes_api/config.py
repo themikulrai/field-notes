@@ -22,6 +22,7 @@ class Settings(BaseSettings):
         if isinstance(v, str) and v.startswith("postgres://"):
             return v.replace("postgres://", "postgresql+asyncpg://", 1)
         return v
+
     field_notes_cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     # SSE keepalive interval. Overridable in tests so we don't wait 25s for a keepalive assertion.
     field_notes_sse_keepalive_seconds: float = 25.0
