@@ -27,6 +27,10 @@ if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 if database_url.startswith("postgresql+asyncpg://"):
     database_url = database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+# Local single-process self-host uses sqlite+aiosqlite (async); Alembic needs a
+# sync driver, so collapse it to the stdlib sqlite dialect.
+if database_url.startswith("sqlite+aiosqlite://"):
+    database_url = database_url.replace("sqlite+aiosqlite://", "sqlite://", 1)
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 

@@ -1,10 +1,23 @@
-.PHONY: dev build restart stop status logs update test lint format fmt web-dev api-dev seed clean
+.PHONY: dev build build-web restart stop status logs update test lint format fmt web-dev api-dev seed clean
 
 # ---- Always-on local stack (Option B: native mamba Postgres + native uvicorn) ----
 
 # Build the React app into apps/web/dist/ (served by the always-on API).
 build:
 	cd apps/web && npm run build
+
+# Build the SPA AND stage it inside the API package so it ships in the wheel.
+# Run this (on a machine with Node) before committing frontend changes or
+# building a release — `uvx --from git+<repo> field-notes` serves this _web/.
+#
+# VITE_DEFAULT_KEY=local bakes a throwaway key into the local bundle so the UI
+# skips the "enter your key" gate; the loopback server has auth disabled and
+# ignores it. (A networked deploy builds its own dist without this.)
+build-web:
+	cd apps/web && npm ci && VITE_DEFAULT_KEY=local npm run build
+	rm -rf apps/api/field_notes_api/_web
+	cp -r apps/web/dist apps/api/field_notes_api/_web
+	@echo "staged apps/web/dist -> apps/api/field_notes_api/_web (commit it so uvx-from-git serves the UI)"
 
 # Restart the always-on API (after backend code changes or rebuilding the web).
 restart:

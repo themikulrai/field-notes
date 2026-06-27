@@ -13,11 +13,14 @@ dependencies = [
     "python-dotenv>=1.0",
     "httpx>=0.27",
     "sse-starlette>=2.1",
+    # Runtime driver for the local single-process self-host (sqlite+aiosqlite).
+    "aiosqlite>=0.20",
     "field-notes-schema",
 ]
 
 [project.scripts]
 field-notes-api = "field_notes_api.__main__:main"
+field-notes = "field_notes_api.cli:main"
 
 [dependency-groups]
 dev = [
@@ -25,7 +28,6 @@ dev = [
     "pytest-asyncio>=0.24",
     "pytest-cov>=5.0",
     "ruff>=0.8",
-    "aiosqlite>=0.20",
     "psycopg2-binary>=2.9.12",
 ]
 
@@ -35,3 +37,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["field_notes_api"]
+
+# Bundle the Alembic migrations under the package so `field-notes serve` /
+# `import-db` can run `alembic upgrade head` from an installed wheel (cli.py
+# looks for field_notes_api/_alembic/). The built SPA at field_notes_api/_web/
+# (produced by `make build-web`) is picked up by the default package include.
+[tool.hatch.build.targets.wheel.force-include]
+"alembic" = "field_notes_api/_alembic/alembic"
+"alembic.ini" = "field_notes_api/_alembic/alembic.ini"

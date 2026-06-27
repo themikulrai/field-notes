@@ -72,8 +72,10 @@ def _verify_sse_token(token: str) -> bool:
 
 async def require_api_key(x_field_notes_key: str | None = Header(default=None)) -> None:
     """Header-based auth dependency for normal JSON endpoints."""
-    expected = get_settings().field_notes_key
-    if not x_field_notes_key or not hmac.compare_digest(x_field_notes_key, expected):
+    settings = get_settings()
+    if settings.field_notes_auth_disabled:
+        return
+    if not x_field_notes_key or not hmac.compare_digest(x_field_notes_key, settings.field_notes_key):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="missing or invalid api key",
@@ -90,6 +92,8 @@ async def require_api_key_query(
       - `?token=...`: HMAC-signed short-lived token from POST /sse-token (preferred)
       - `?key=...`:   raw shared secret (DEPRECATED — leaks via Heroku router logs)
     """
+    if get_settings().field_notes_auth_disabled:
+        return
     if token:
         if _verify_sse_token(token):
             return
