@@ -1,6 +1,6 @@
 .PHONY: dev build build-web restart stop status logs update test lint format fmt web-dev api-dev seed clean
 
-# ---- Always-on local stack (Option B: native mamba Postgres + native uvicorn) ----
+# ---- Always-on local stack (native uvicorn + file-backed SQLite) ----
 
 # Build the React app into apps/web/dist/ (served by the always-on API).
 build:
@@ -48,11 +48,6 @@ status:
 	  echo "API: up (pid $$(cat $$PIDFILE))"; \
 	else \
 	  echo "API: down"; \
-	fi; \
-	if /iris/u/mikulrai/envs/field-notes-pg/bin/pg_ctl -D data/pgdata status >/dev/null 2>&1; then \
-	  echo "Postgres: up"; \
-	else \
-	  echo "Postgres: down"; \
 	fi
 
 logs:

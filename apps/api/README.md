@@ -1,26 +1,17 @@
 # field-notes-api
 
-FastAPI + Postgres backend.
+FastAPI backend, file-backed SQLite (local single-process self-host).
 
 ## Run locally
 
 ```bash
-# 1. start postgres
-docker compose up -d postgres
-
-# 2. apply migrations
-cd apps/api
-DATABASE_URL=postgresql+asyncpg://field_notes:field_notes@localhost:5432/field_notes \
-  uv run alembic upgrade head
-
-# 3. start the api
-FIELD_NOTES_KEY=changeme \
-DATABASE_URL=postgresql+asyncpg://field_notes:field_notes@localhost:5432/field_notes \
-  uv run uvicorn field_notes_api.main:app --reload --port 8000
+# migrations + server in one step: `serve` runs `alembic upgrade head` on the
+# SQLite DB under --data-dir, then starts uvicorn (auth disabled on loopback).
+uv run field-notes serve --data-dir ~/.field-notes --port 8000
 ```
 
 ```bash
-curl -H "X-Field-Notes-Key: changeme" http://localhost:8000/projects  # -> []
+curl http://localhost:8000/projects  # -> []  (loopback = keyless)
 ```
 
 ## Endpoints
@@ -35,9 +26,8 @@ All non-healthz/non-events endpoints require `X-Field-Notes-Key: <FIELD_NOTES_KE
 
 ## Tests
 
-By default tests run against an in-memory SQLite (no Docker required). To run
-against a real Postgres set `TEST_DATABASE_URL`.
+Tests run against an in-memory SQLite.
 
 ```bash
-uv run pytest -q             # 45 tests, ~3s on SQLite
+uv run pytest -q
 ```

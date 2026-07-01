@@ -4,10 +4,9 @@
 # app (apps/web/dist) as static files at "/" via StaticFiles. SSE lives at
 # /events on the same origin so there's zero CORS preflight in production.
 #
-# To stand up a new app:
+# To stand up a new app (field-notes uses file-backed SQLite — no database to
+# provision; the DB lives on the machine's volume under the data dir):
 #   fly launch --no-deploy --copy-config deploy/fly.toml
-#   fly postgres create --name field-notes-db --region sjc
-#   fly postgres attach field-notes-db
 #   fly secrets set FIELD_NOTES_KEY=$(openssl rand -hex 32)
 #   fly deploy --config deploy/fly.toml --remote-only
 #

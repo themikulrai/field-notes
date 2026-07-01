@@ -9,22 +9,8 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: field_notes
-          POSTGRES_PASSWORD: field_notes
-          POSTGRES_DB: field_notes
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U field_notes"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 20
     env:
-      # Default to SQLite for the bulk of the suite; one job below could matrix
-      # in a postgres URL if desired. Keeping the suite portable is intentional.
+      # field-notes is local-only (SQLite); the suite runs against in-memory SQLite.
       DATABASE_URL: "sqlite+aiosqlite:///:memory:"
       FIELD_NOTES_KEY: "ci-test-key"
     steps:

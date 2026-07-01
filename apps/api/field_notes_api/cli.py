@@ -4,7 +4,6 @@ Subcommands:
   serve         run migrations on a file-backed SQLite DB and start the server
   add-media     copy media files into the managed media root (see media.py)
   verify-media  report cell media URLs missing from the media root (see media.py)
-  import-db     copy a remote DB (e.g. Heroku Postgres) into local SQLite (transfer.py)
   fetch-media   download the baked media tarballs into the media root (transfer.py)
   info          print the resolved local paths + auth mode
 
@@ -197,24 +196,6 @@ def _cmd_verify_media(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_import_db(args: argparse.Namespace) -> int:
-    import asyncio
-
-    from . import transfer
-
-    data_dir = Path(args.data_dir).expanduser()
-    (data_dir / "media").mkdir(parents=True, exist_ok=True)
-    dest_url = f"sqlite+aiosqlite:///{data_dir / 'field-notes.db'}"
-    run_migrations(dest_url)  # ensure local schema + alembic stamp before copy
-
-    counts = asyncio.run(transfer.import_db(args.source, dest_url, overwrite=args.overwrite))
-    for table, n in counts.items():
-        print(f"  {n:6} {table}")
-    print(f"imported into {data_dir / 'field-notes.db'}")
-    print("next: run `field-notes fetch-media` so /media references resolve, then `field-notes verify-media`")
-    return 0
-
-
 def _locate_dockerfile() -> Path | None:
     repo_dockerfile = Path(__file__).resolve().parents[3] / "Dockerfile"
     return repo_dockerfile if repo_dockerfile.is_file() else None
@@ -267,12 +248,6 @@ def build_parser() -> argparse.ArgumentParser:
     p_vfy = sub.add_parser("verify-media", help="report cell media URLs missing from the media root")
     p_vfy.add_argument("--data-dir", default=DEFAULT_DATA_DIR)
     p_vfy.set_defaults(func=_cmd_verify_media)
-
-    p_imp = sub.add_parser("import-db", help="copy a remote DB (e.g. Heroku Postgres) into local SQLite")
-    p_imp.add_argument("--source", required=True, help="source DATABASE_URL (postgres://… or sqlite://…)")
-    p_imp.add_argument("--data-dir", default=DEFAULT_DATA_DIR)
-    p_imp.add_argument("--overwrite", action="store_true", help="replace existing local rows instead of refusing")
-    p_imp.set_defaults(func=_cmd_import_db)
 
     p_fm = sub.add_parser("fetch-media", help="download the baked media tarballs into the media root")
     p_fm.add_argument("--data-dir", default=DEFAULT_DATA_DIR)

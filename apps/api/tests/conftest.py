@@ -1,12 +1,8 @@
 """Shared test fixtures.
 
-We default to in-memory SQLite via aiosqlite. The same models work on PG, but
-this machine doesn't have a reachable docker daemon and the spec says SQLite
-fallback is the supported path when Docker is unavailable.
-
-If `TEST_DATABASE_URL` is set we honour it (so the same suite runs in CI against
-a real Postgres). Otherwise we use `sqlite+aiosqlite:///:memory:` with a
-StaticPool so every connection sees the same DB.
+field-notes is local-only (file-backed SQLite), so tests run against an
+in-memory SQLite via aiosqlite with a StaticPool (every connection sees the same
+DB).
 """
 
 from __future__ import annotations
@@ -24,8 +20,8 @@ from sqlalchemy.pool import StaticPool
 os.environ.setdefault("FIELD_NOTES_KEY", "test-key")
 os.environ.setdefault("FIELD_NOTES_SSE_KEEPALIVE_SECONDS", "0.5")
 
-# Test database URL: SQLite by default, overridable.
-TEST_DB_URL = os.environ.get("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+# Test database URL: in-memory SQLite (the only supported backend).
+TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 os.environ["DATABASE_URL"] = TEST_DB_URL
 
 # Reset Settings cache so the env we just set is what gets read.
@@ -43,15 +39,12 @@ API_KEY = os.environ["FIELD_NOTES_KEY"]
 @pytest_asyncio.fixture
 async def engine() -> AsyncIterator:
     """Fresh engine per test for isolation."""
-    if TEST_DB_URL.startswith("sqlite"):
-        eng = create_async_engine(
-            TEST_DB_URL,
-            connect_args={"check_same_thread": False},
-            poolclass=StaticPool,
-            future=True,
-        )
-    else:
-        eng = create_async_engine(TEST_DB_URL, future=True)
+    eng = create_async_engine(
+        TEST_DB_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        future=True,
+    )
 
     set_engine_for_testing(eng)
     async with eng.begin() as conn:
