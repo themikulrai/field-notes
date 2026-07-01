@@ -117,8 +117,11 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 }
 
 // Projects -----------------------------------------------------------------
-export function listProjects(): Promise<Project[]> {
-  return request<Project[]>("/projects");
+export function listProjects(
+  archived: "active" | "archived" | "all" = "active",
+): Promise<Project[]> {
+  const q = archived === "active" ? "" : `?archived=${archived}`;
+  return request<Project[]>(`/projects${q}`);
 }
 export function createProject(body: ProjectCreate): Promise<Project> {
   return request<Project>("/projects", { method: "POST", body });

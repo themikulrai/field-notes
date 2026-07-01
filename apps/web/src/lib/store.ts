@@ -83,6 +83,7 @@ function saveCollapsedCells(c: Record<string, Record<string, boolean>>) {
 
 interface StoreState {
   projects: Project[];
+  archivedProjects: Project[];
   activeProjectId: string | null;
   cellsByProject: Record<string, Cell[]>;
   filter: Filter;
@@ -103,6 +104,9 @@ interface StoreState {
 
   createProject: (name: string) => Promise<Project | null>;
   deleteProject: (pid: string) => Promise<void>;
+  archiveProject: (pid: string) => Promise<void>;
+  unarchiveProject: (pid: string) => Promise<void>;
+  loadArchivedProjects: () => Promise<void>;
   // Move a project to `toIndex` in the tab strip (optimistic, persisted).
   reorderProject: (pid: string, toIndex: number) => Promise<void>;
 
@@ -167,6 +171,7 @@ function findCellLocation(
 
 export const useStore = create<StoreState>((set, get) => ({
   projects: [],
+  archivedProjects: [],
   activeProjectId: null,
   cellsByProject: {},
   filter: "all",
@@ -231,14 +236,59 @@ export const useStore = create<StoreState>((set, get) => ({
 
   deleteProject: async (pid) => {
     const prev = get().projects;
+    const prevArchived = get().archivedProjects;
+    const prevActive = get().activeProjectId;
+    const remaining = prev.filter((p) => p.id !== pid);
+    const nextActive = prevActive === pid ? (remaining[0]?.id ?? null) : prevActive;
+    set({
+      projects: remaining,
+      archivedProjects: prevArchived.filter((p) => p.id !== pid),
+      activeProjectId: nextActive,
+    });
+    try {
+      await api.deleteProject(pid);
+    } catch (e) {
+      set({
+        projects: prev,
+        archivedProjects: prevArchived,
+        activeProjectId: prevActive,
+        error: (e as Error).message,
+      });
+    }
+  },
+
+  archiveProject: async (pid) => {
+    const prev = get().projects;
     const prevActive = get().activeProjectId;
     const remaining = prev.filter((p) => p.id !== pid);
     const nextActive = prevActive === pid ? (remaining[0]?.id ?? null) : prevActive;
     set({ projects: remaining, activeProjectId: nextActive });
     try {
-      await api.deleteProject(pid);
+      await api.updateProject(pid, { archived: true });
     } catch (e) {
       set({ projects: prev, activeProjectId: prevActive, error: (e as Error).message });
+    }
+  },
+
+  unarchiveProject: async (pid) => {
+    try {
+      await api.updateProject(pid, { archived: false });
+      const [active, archived] = await Promise.all([
+        api.listProjects("active"),
+        api.listProjects("archived"),
+      ]);
+      set({ projects: active, archivedProjects: archived });
+    } catch (e) {
+      set({ error: (e as Error).message });
+    }
+  },
+
+  loadArchivedProjects: async () => {
+    try {
+      const ps = await api.listProjects("archived");
+      set({ archivedProjects: ps });
+    } catch (e) {
+      set({ error: (e as Error).message });
     }
   },
 

@@ -77,6 +77,7 @@ export interface Project {
   ui_filter?: "all" | CellStatus | null;
   position?: number;
   counts?: ProjectCounts;
+  archived?: boolean;
 }
 
 export interface Cell {
@@ -110,6 +111,7 @@ export interface ProjectUpdate {
   name?: string | null;
   subtitle?: string | null;
   repo?: string | null;
+  archived?: boolean | null;
 }
 
 export interface CellCreate {

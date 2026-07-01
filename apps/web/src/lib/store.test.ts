@@ -295,6 +295,31 @@ describe("store optimistic updates", () => {
     expect(state.p1["abc#0"]).toBeUndefined();
   });
 
+  it("archiveProject removes it from projects and PATCHes archived:true", async () => {
+    const { useStore } = await import("./store");
+    useStore.setState({
+      projects: [
+        { id: "p1", name: "one", created_at: "", updated_at: "" },
+        { id: "p2", name: "two", created_at: "", updated_at: "" },
+      ],
+      activeProjectId: "p1",
+    });
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      mkRes({ id: "p1", name: "one", created_at: "", updated_at: "", archived: true }),
+    ) as typeof fetch;
+
+    await useStore.getState().archiveProject("p1");
+
+    expect(useStore.getState().projects.map((p) => p.id)).toEqual(["p2"]);
+    expect(useStore.getState().activeProjectId).toBe("p2");
+
+    const fm = globalThis.fetch as ReturnType<typeof vi.fn>;
+    const [url, opts] = fm.mock.calls[0];
+    expect(url).toMatch(/\/projects\/p1$/);
+    expect(JSON.parse(opts.body)).toMatchObject({ archived: true });
+  });
+
   it("deleteProject leaves activeProjectId alone when a non-active project is deleted", async () => {
     const { useStore } = await import("./store");
     useStore.setState({
