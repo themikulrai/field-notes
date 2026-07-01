@@ -1164,21 +1164,22 @@
   z-index: 100;
 }
 .archive-modal {
-  background: var(--panel, #1c1c1e);
-  border: 1px solid var(--border, #333);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--paper-4);
   border-radius: 8px;
   min-width: 420px;
   max-width: 560px;
   max-height: 70vh;
   overflow: auto;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 .archive-modal-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border, #333);
+  border-bottom: 1px solid var(--paper-4);
 }
 .archive-modal-x {
   background: none;
@@ -1201,7 +1202,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border, #2a2a2a);
+  border-bottom: 1px solid var(--paper-3);
 }
 .archive-row-actions {
   display: flex;
@@ -1210,15 +1211,17 @@
 .archive-unarchive,
 .archive-delete {
   background: none;
-  border: 1px solid var(--border, #444);
+  border: 1px solid var(--paper-4);
   border-radius: 4px;
   padding: 4px 10px;
   cursor: pointer;
   color: inherit;
   font: inherit;
 }
+.archive-unarchive:hover { border-color: var(--ink-4); }
 .archive-delete {
-  color: #ff6b6b;
-  border-color: #5a2a2a;
+  color: var(--c-red);
+  border-color: var(--c-red-bg);
 }
+.archive-delete:hover { border-color: var(--c-red); }
 .error-banner-actions { display: flex; gap: 6px; flex-shrink: 0; }
