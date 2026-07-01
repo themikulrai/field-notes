@@ -109,15 +109,13 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: inherit;
-    font: inherit;
-  }
-  .ptab-folder svg { color: var(--ink-3); }
-  .ptab-folder:hover {
-    color: var(--accent, #4a9eff);
   }
   .ptab-folder svg {
+    color: var(--ink-3);
     transition: transform 0.1s ease;
+  }
+  .ptab-folder:hover {
+    color: var(--accent, #4a9eff);
   }
   .ptab-folder:hover svg {
     transform: scale(1.08);

@@ -243,4 +243,19 @@ describe("ProjectTabStrip", () => {
     fireEvent.click(screen.getByRole("button", { name: /archived projects/i }));
     expect(onOpenArchive).toHaveBeenCalled();
   });
+
+  it("shows the archive button on the last remaining tab (archiving the last project is allowed)", () => {
+    render(
+      <ProjectTabStrip
+        projects={[{ id: "p1", name: "one" } as any]}
+        activeId="p1"
+        onSelect={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={() => {}}
+        onAdd={() => {}}
+        onReorder={() => {}}
+      />,
+    );
+    expect(screen.getByLabelText(/archive /i)).toBeTruthy();
+  });
 });
