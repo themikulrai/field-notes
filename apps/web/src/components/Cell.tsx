@@ -33,6 +33,10 @@ interface Props {
   total: number;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  // Deep-layer ("details") expansion. When provided, the parent owns the
+  // state (persisted in the store); otherwise falls back to local state.
+  deepOpen?: boolean;
+  onToggleDeep?: () => void;
   onReorder: (cid: string, dir: "up" | "down") => void;
   onVerdict: (cid: string, state: VerdictState | null, note: string) => void;
   onUnlock: (cid: string) => void;
@@ -46,13 +50,17 @@ export function Cell({
   total,
   collapsed = false,
   onToggleCollapse,
+  deepOpen,
+  onToggleDeep,
   onReorder,
   onVerdict,
   onUnlock,
   onDelete,
   onChange,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [openLocal, setOpenLocal] = useState(false);
+  const open = deepOpen ?? openLocal;
+  const toggleDeep = onToggleDeep ?? (() => setOpenLocal((v) => !v));
   const status = cell.status || "open";
   const s = statusMeta(status);
   const locked = !!cell.locked;
@@ -212,7 +220,7 @@ export function Cell({
               <button
                 className={`deep-toggle ${open ? "is-open" : ""}`}
                 type="button"
-                onClick={() => setOpen((v) => !v)}
+                onClick={toggleDeep}
                 aria-expanded={open}
               >
                 <span className="deep-toggle-line" aria-hidden="true" />

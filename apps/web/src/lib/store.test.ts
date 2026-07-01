@@ -113,6 +113,41 @@ describe("store optimistic updates", () => {
     expect(raw && JSON.parse(raw).p1["h:0"]).toBe(true);
   });
 
+  it("toggleCell persists in localStorage and round-trips", async () => {
+    const { useStore } = await import("./store");
+    useStore.getState().toggleCell("p1", "c1");
+    expect(useStore.getState().isCellCollapsed("p1", "c1")).toBe(true);
+    const raw = localStorage.getItem("field-notes-collapsed-cells");
+    expect(raw && JSON.parse(raw).p1["c1"]).toBe(true);
+    useStore.getState().toggleCell("p1", "c1");
+    expect(useStore.getState().isCellCollapsed("p1", "c1")).toBe(false);
+  });
+
+  it("toggleDeep persists in localStorage and round-trips", async () => {
+    const { useStore } = await import("./store");
+    expect(useStore.getState().isDeepOpen("p1", "c1")).toBe(false);
+    useStore.getState().toggleDeep("p1", "c1");
+    expect(useStore.getState().isDeepOpen("p1", "c1")).toBe(true);
+    const raw = localStorage.getItem("field-notes-open-deep");
+    expect(raw && JSON.parse(raw).p1["c1"]).toBe(true);
+    useStore.getState().toggleDeep("p1", "c1");
+    expect(useStore.getState().isDeepOpen("p1", "c1")).toBe(false);
+  });
+
+  it("openDeep state is restored from localStorage on store init", async () => {
+    localStorage.setItem("field-notes-open-deep", JSON.stringify({ p1: { c9: true } }));
+    const { useStore } = await import("./store");
+    expect(useStore.getState().isDeepOpen("p1", "c9")).toBe(true);
+    expect(useStore.getState().isDeepOpen("p1", "other")).toBe(false);
+    expect(useStore.getState().isDeepOpen("p2", "c9")).toBe(false);
+  });
+
+  it("openDeep survives corrupt localStorage without throwing", async () => {
+    localStorage.setItem("field-notes-open-deep", "{not json");
+    const { useStore } = await import("./store");
+    expect(useStore.getState().isDeepOpen("p1", "c1")).toBe(false);
+  });
+
   it("deleteProject resets activeProjectId to a remaining project when the active one is deleted", async () => {
     const { useStore } = await import("./store");
     useStore.setState({

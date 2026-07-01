@@ -323,6 +323,67 @@ describe("Cell", () => {
     expect(screen.getByText("lr")).toBeInTheDocument();
   });
 
+  it("deep layer is controlled by deepOpen prop; clicking calls onToggleDeep instead of local state", () => {
+    const spy = vi.fn();
+    const deep = { hparams: { lr: "3e-4" }, files: [], runs: [], logs: "" };
+    const { rerender } = render(
+      <Cell
+        cell={mkCell({ deep })}
+        index={0}
+        total={1}
+        deepOpen={false}
+        onToggleDeep={spy}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    // Closed: deep content hidden.
+    expect(screen.queryByText("hyperparameters")).toBeNull();
+    // Clicking must delegate to the parent, not flip local state.
+    fireEvent.click(screen.getByText(/show hyperparameters/i));
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("hyperparameters")).toBeNull();
+    // Parent re-renders with deepOpen=true (as the store would after toggleDeep).
+    rerender(
+      <Cell
+        cell={mkCell({ deep })}
+        index={0}
+        total={1}
+        deepOpen={true}
+        onToggleDeep={spy}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("hyperparameters")).toBeInTheDocument();
+    expect(screen.getByText("lr")).toBeInTheDocument();
+  });
+
+  it("deep layer renders open on first mount when deepOpen=true (restored state)", () => {
+    render(
+      <Cell
+        cell={mkCell({ deep: { hparams: { lr: "3e-4" }, files: [], runs: [], logs: "" } })}
+        index={0}
+        total={1}
+        deepOpen={true}
+        onToggleDeep={vi.fn()}
+        onReorder={vi.fn()}
+        onVerdict={vi.fn()}
+        onUnlock={vi.fn()}
+        onDelete={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("hyperparameters")).toBeInTheDocument();
+    expect(screen.getByText(/hide details/i)).toBeInTheDocument();
+  });
+
   it("when collapsed, hides conclusion + metrics; clicking header toggles", () => {
     const toggle = vi.fn();
     const { rerender } = render(

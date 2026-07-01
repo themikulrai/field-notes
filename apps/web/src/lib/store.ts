@@ -81,6 +81,28 @@ function saveCollapsedCells(c: Record<string, Record<string, boolean>>) {
   }
 }
 
+// Deep-layer ("details") expansion. Unlike collapsedCells (true = collapsed,
+// default expanded), deep layers default CLOSED, so true = open.
+const OPEN_DEEP_KEY = "field-notes-open-deep";
+
+function loadOpenDeep(): Record<string, Record<string, boolean>> {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(OPEN_DEEP_KEY) : null;
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
+function saveOpenDeep(c: Record<string, Record<string, boolean>>) {
+  try {
+    localStorage.setItem(OPEN_DEEP_KEY, JSON.stringify(c));
+  } catch {
+    /* ignore */
+  }
+}
+
 interface StoreState {
   projects: Project[];
   archivedProjects: Project[];
@@ -89,6 +111,7 @@ interface StoreState {
   filter: Filter;
   collapsedSections: Record<string, Record<string, boolean>>;
   collapsedCells: Record<string, Record<string, boolean>>;
+  openDeep: Record<string, Record<string, boolean>>;
   loading: boolean;
   error: string | null;
 
@@ -131,6 +154,8 @@ interface StoreState {
   isSectionCollapsed: (pid: string, key: string) => boolean;
   toggleCell: (pid: string, cid: string) => void;
   isCellCollapsed: (pid: string, cid: string) => boolean;
+  toggleDeep: (pid: string, cid: string) => void;
+  isDeepOpen: (pid: string, cid: string) => boolean;
 
   // Live-event hooks
   applyEvent: (env: {
@@ -177,6 +202,7 @@ export const useStore = create<StoreState>((set, get) => ({
   filter: "all",
   collapsedSections: loadCollapsed(),
   collapsedCells: loadCollapsedCells(),
+  openDeep: loadOpenDeep(),
   loading: false,
   error: null,
 
@@ -522,6 +548,20 @@ export const useStore = create<StoreState>((set, get) => ({
   },
   isCellCollapsed: (pid, cid) => {
     const cur = get().collapsedCells[pid];
+    return !!cur?.[cid];
+  },
+
+  toggleDeep: (pid, cid) => {
+    set((s) => {
+      const cur = s.openDeep[pid] || {};
+      const nextProj = { ...cur, [cid]: !cur[cid] };
+      const next = { ...s.openDeep, [pid]: nextProj };
+      saveOpenDeep(next);
+      return { openDeep: next };
+    });
+  },
+  isDeepOpen: (pid, cid) => {
+    const cur = get().openDeep[pid];
     return !!cur?.[cid];
   },
 
