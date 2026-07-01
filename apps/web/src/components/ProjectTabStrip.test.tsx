@@ -27,7 +27,8 @@ describe("ProjectTabStrip", () => {
         projects={projects}
         activeId="a"
         onSelect={() => {}}
-        onClose={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={() => {}}
         onAdd={() => {}}
         onReorder={() => {}}
       />,
@@ -49,7 +50,8 @@ describe("ProjectTabStrip", () => {
         projects={projects}
         activeId="a"
         onSelect={() => {}}
-        onClose={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={() => {}}
         onAdd={() => {}}
         onReorder={() => {}}
       />,
@@ -69,7 +71,8 @@ describe("ProjectTabStrip", () => {
         projects={projects}
         activeId="a"
         onSelect={() => {}}
-        onClose={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={() => {}}
         onAdd={() => {}}
         onReorder={() => {}}
       />,
@@ -87,7 +90,8 @@ describe("ProjectTabStrip", () => {
         projects={projects}
         activeId="a"
         onSelect={() => {}}
-        onClose={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={() => {}}
         onAdd={() => {}}
         onReorder={() => {}}
       />,
@@ -105,7 +109,8 @@ describe("ProjectTabStrip", () => {
         projects={projects}
         activeId="a"
         onSelect={() => {}}
-        onClose={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={() => {}}
         onAdd={() => {}}
         onReorder={() => {}}
       />,
@@ -124,7 +129,8 @@ describe("ProjectTabStrip", () => {
         projects={projects}
         activeId="a"
         onSelect={() => {}}
-        onClose={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={() => {}}
         onAdd={() => {}}
         onReorder={() => {}}
       />,
@@ -147,7 +153,8 @@ describe("ProjectTabStrip", () => {
         projects={projects}
         activeId="a"
         onSelect={() => {}}
-        onClose={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={() => {}}
         onAdd={() => {}}
         onReorder={onReorder}
       />,
@@ -170,7 +177,8 @@ describe("ProjectTabStrip", () => {
         projects={projects}
         activeId="a"
         onSelect={() => {}}
-        onClose={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={() => {}}
         onAdd={() => {}}
         onReorder={onReorder}
       />,
@@ -192,12 +200,47 @@ describe("ProjectTabStrip", () => {
         projects={projects}
         activeId="a"
         onSelect={onSelect}
-        onClose={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={() => {}}
         onAdd={() => {}}
         onReorder={() => {}}
       />,
     );
     fireEvent.click(screen.getByText("Beta"));
     expect(onSelect).toHaveBeenCalledWith("b");
+  });
+
+  it("clicking a tab's × calls onArchive, not delete", () => {
+    const onArchive = vi.fn();
+    render(
+      <ProjectTabStrip
+        projects={[{ id: "p1", name: "one" } as any, { id: "p2", name: "two" } as any]}
+        activeId="p1"
+        onSelect={() => {}}
+        onArchive={onArchive}
+        onOpenArchive={() => {}}
+        onAdd={() => {}}
+        onReorder={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("archive one"));
+    expect(onArchive).toHaveBeenCalledWith("p1");
+  });
+
+  it("clicking the projects folder opens the archive window", () => {
+    const onOpenArchive = vi.fn();
+    render(
+      <ProjectTabStrip
+        projects={[{ id: "p1", name: "one" } as any]}
+        activeId="p1"
+        onSelect={() => {}}
+        onArchive={() => {}}
+        onOpenArchive={onOpenArchive}
+        onAdd={() => {}}
+        onReorder={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /archived projects/i }));
+    expect(onOpenArchive).toHaveBeenCalled();
   });
 });

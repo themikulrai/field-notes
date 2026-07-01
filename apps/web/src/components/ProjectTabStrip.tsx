@@ -5,7 +5,8 @@ interface StripProps {
   projects: Project[];
   activeId: string | null;
   onSelect: (pid: string) => void;
-  onClose: (pid: string) => void;
+  onArchive: (pid: string) => void;
+  onOpenArchive: () => void;
   onAdd: () => void;
   // Drop `pid` at the displayed index `toIndex` (drag-to-reorder the tab strip).
   onReorder: (pid: string, toIndex: number) => void;
@@ -16,11 +17,10 @@ const ZERO_COUNTS: ProjectCounts = { in_progress: 0, open: 0, verified: 0, rejec
 function ProjectTab({
   project,
   active,
-  canClose,
   dragging,
   dragOver,
   onClick,
-  onClose,
+  onArchive,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -28,11 +28,10 @@ function ProjectTab({
 }: {
   project: Project;
   active: boolean;
-  canClose: boolean;
   dragging: boolean;
   dragOver: boolean;
   onClick: () => void;
-  onClose: () => void;
+  onArchive: () => void;
   onDragStart: () => void;
   onDragEnter: () => void;
   onDragEnd: () => void;
@@ -100,18 +99,20 @@ function ProjectTab({
           </span>
         </div>
       </div>
-      {active && canClose && (
+      {active && (
         <button
           className="ptab-close"
-          aria-label={`close ${project.name}`}
+          aria-label={`archive ${project.name}`}
           onClick={(e) => {
             e.stopPropagation();
-            onClose();
+            onArchive();
           }}
-          title="close project"
+          title="archive project"
         >
           <svg viewBox="0 0 12 12" width="10" height="10">
-            <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            <path d="M1.5 3.5h9M2.5 3.5v6.5h7V3.5M4.8 6h2.4"
+                  stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"
+                  fill="none" />
           </svg>
         </button>
       )}
@@ -123,7 +124,8 @@ export function ProjectTabStrip({
   projects,
   activeId,
   onSelect,
-  onClose,
+  onArchive,
+  onOpenArchive,
   onAdd,
   onReorder,
 }: StripProps) {
@@ -132,8 +134,13 @@ export function ProjectTabStrip({
 
   return (
     <div className="ptab-strip" role="tablist" aria-label="projects">
-      <div className="ptab-folder" aria-hidden="true">
-        <svg viewBox="0 0 18 14" width="14" height="12">
+      <button
+        className="ptab-folder"
+        onClick={onOpenArchive}
+        aria-label="archived projects"
+        title="archived projects"
+      >
+        <svg viewBox="0 0 18 14" width="18" height="15">
           <path
             d="M1 3.5c0-.8.7-1.5 1.5-1.5h3.7c.5 0 1 .2 1.3.6L8.7 4H15.5c.8 0 1.5.7 1.5 1.5v6c0 .8-.7 1.5-1.5 1.5h-13C1.7 13 1 12.3 1 11.5v-8z"
             fill="none"
@@ -142,18 +149,17 @@ export function ProjectTabStrip({
           />
         </svg>
         <span className="mono">projects</span>
-      </div>
+      </button>
       <div className="ptab-list">
         {projects.map((p) => (
           <ProjectTab
             key={p.id}
             project={p}
             active={p.id === activeId}
-            canClose={projects.length > 1}
             dragging={dragId === p.id}
             dragOver={overId === p.id && dragId !== null && dragId !== p.id}
             onClick={() => onSelect(p.id)}
-            onClose={() => onClose(p.id)}
+            onArchive={() => onArchive(p.id)}
             onDragStart={() => {
               setDragId(p.id);
               setOverId(p.id);
