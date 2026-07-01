@@ -21,9 +21,13 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # sa.false() is dialect-portable: renders `0` on SQLite (which has no native
+    # boolean — a literal "false" would be stored as the STRING 'false' and never
+    # match a `WHERE archived IS 0` filter, silently hiding every existing row)
+    # and `false` on Postgres.
     op.add_column(
         "projects",
-        sa.Column("archived", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column("archived", sa.Boolean(), nullable=False, server_default=sa.false()),
     )
 
 

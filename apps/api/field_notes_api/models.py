@@ -23,6 +23,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    false,
     func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -49,8 +50,10 @@ class Project(Base):
     # Manual left-to-right tab order (drag to reorder). Dense 0..N-1 at rest;
     # create_project appends at the end, /projects/{pid}/reorder renumbers.
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # server_default=false() (not "false"): SQLite stores a literal "false" as the
+    # STRING 'false', which never matches `WHERE archived IS 0` and hides rows.
     archived: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
+        Boolean, nullable=False, default=False, server_default=false()
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
