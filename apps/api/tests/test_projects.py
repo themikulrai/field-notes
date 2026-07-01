@@ -187,3 +187,27 @@ async def test_archived_defaults_false_and_patch_toggles(client) -> None:
 
     r = await client.patch(f"/projects/{pid}", json={"archived": False})
     assert r.json()["archived"] is False
+
+
+async def test_list_projects_archived_filter(client) -> None:
+    a = (await client.post("/projects", json={"name": "active-one"})).json()["id"]
+    b = (await client.post("/projects", json={"name": "arch-one"})).json()["id"]
+    await client.patch(f"/projects/{b}", json={"archived": True})
+
+    # default: only active
+    ids = [p["id"] for p in (await client.get("/projects")).json()]
+    assert a in ids and b not in ids
+
+    # archived only
+    r = await client.get("/projects", params={"archived": "archived"})
+    ids = [p["id"] for p in r.json()]
+    assert b in ids and a not in ids
+
+    # all
+    r = await client.get("/projects", params={"archived": "all"})
+    ids = [p["id"] for p in r.json()]
+    assert a in ids and b in ids
+
+    # invalid -> 422
+    r = await client.get("/projects", params={"archived": "bogus"})
+    assert r.status_code == 422

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from field_notes_schema import ProjectCreate, ProjectRead, ProjectUpdate, ReorderRequest, UiFilterSet
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,9 +29,17 @@ def _source(request: Request) -> str:
 
 
 @router.get("", response_model=list[ProjectRead])
-async def list_projects(session: AsyncSession = Depends(get_session)) -> list[ProjectRead]:
+async def list_projects(
+    archived: Literal["active", "archived", "all"] = Query("active"),
+    session: AsyncSession = Depends(get_session),
+) -> list[ProjectRead]:
     # Manual tab order first; created_at only as a stable tiebreaker.
-    result = await session.execute(select(Project).order_by(Project.position, Project.created_at))
+    stmt = select(Project).order_by(Project.position, Project.created_at)
+    if archived == "active":
+        stmt = stmt.where(Project.archived.is_(False))
+    elif archived == "archived":
+        stmt = stmt.where(Project.archived.is_(True))
+    result = await session.execute(stmt)
     projects = list(result.scalars().all())
     counts = await project_counts_map(session, [p.id for p in projects])
     return [project_to_read(p, counts.get(p.id)) for p in projects]
