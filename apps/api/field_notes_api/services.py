@@ -95,6 +95,7 @@ def project_to_read(p: Project, counts: ProjectCounts | None = None) -> ProjectR
         updated_at=p.updated_at,
         ui_filter=p.ui_filter,
         position=p.position,
+        archived=p.archived,
         counts=counts or ProjectCounts(),
     )
 

@@ -127,6 +127,7 @@ class ProjectRead(ProjectCreate):
     updated_at: datetime
     ui_filter: UiFilter | None = None
     position: int = 0
+    archived: bool = False
     counts: ProjectCounts = Field(default_factory=ProjectCounts)
 
 
@@ -135,6 +136,7 @@ class ProjectUpdate(BaseModel):
     subtitle: str | None = None
     repo: str | None = None
     ui_filter: UiFilter | None = None
+    archived: bool | None = None
 
 
 class UiFilterSet(BaseModel):

@@ -174,3 +174,16 @@ async def test_reorder_unknown_project_404(client) -> None:
 
     r = await client.post(f"/projects/{uuid.uuid4()}/reorder", json={"position": 0})
     assert r.status_code == 404
+
+
+async def test_archived_defaults_false_and_patch_toggles(client) -> None:
+    r = await client.post("/projects", json={"name": "arch"})
+    pid = r.json()["id"]
+    assert r.json()["archived"] is False
+
+    r = await client.patch(f"/projects/{pid}", json={"archived": True})
+    assert r.status_code == 200, r.text
+    assert r.json()["archived"] is True
+
+    r = await client.patch(f"/projects/{pid}", json={"archived": False})
+    assert r.json()["archived"] is False
