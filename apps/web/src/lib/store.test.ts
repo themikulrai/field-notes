@@ -303,6 +303,7 @@ describe("store optimistic updates", () => {
         { id: "p2", name: "two", created_at: "", updated_at: "" },
       ],
       activeProjectId: "p1",
+      archivedProjects: [],
     });
 
     globalThis.fetch = vi.fn().mockResolvedValue(
@@ -313,6 +314,11 @@ describe("store optimistic updates", () => {
 
     expect(useStore.getState().projects.map((p) => p.id)).toEqual(["p2"]);
     expect(useStore.getState().activeProjectId).toBe("p2");
+
+    // archived project must be moved into archivedProjects optimistically
+    const archived = useStore.getState().archivedProjects;
+    expect(archived.map((p) => p.id)).toContain("p1");
+    expect(archived.find((p) => p.id === "p1")?.archived).toBe(true);
 
     const fm = globalThis.fetch as ReturnType<typeof vi.fn>;
     const [url, opts] = fm.mock.calls[0];

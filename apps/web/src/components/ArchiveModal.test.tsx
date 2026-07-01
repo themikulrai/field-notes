@@ -32,6 +32,21 @@ describe("ArchiveModal", () => {
     expect(screen.getByText(/no archived projects/i)).toBeInTheDocument();
   });
 
+  it("renders status count pips for archived projects", () => {
+    const p = {
+      id: "p1",
+      name: "beta",
+      counts: { in_progress: 0, open: 2, verified: 1, rejected: 0 },
+    } as any;
+    render(
+      <ArchiveModal projects={[p]} onUnarchive={() => {}} onDelete={() => {}} onClose={() => {}} />,
+    );
+    // open pip shows "2"
+    expect(screen.getByText("2")).toBeInTheDocument();
+    // verified pip shows "1"
+    expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
   it("closes on Escape and backdrop click", () => {
     const onClose = vi.fn();
     render(

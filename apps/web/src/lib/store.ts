@@ -259,14 +259,25 @@ export const useStore = create<StoreState>((set, get) => ({
 
   archiveProject: async (pid) => {
     const prev = get().projects;
+    const prevArchived = get().archivedProjects;
     const prevActive = get().activeProjectId;
+    const target = prev.find((p) => p.id === pid);
     const remaining = prev.filter((p) => p.id !== pid);
     const nextActive = prevActive === pid ? (remaining[0]?.id ?? null) : prevActive;
-    set({ projects: remaining, activeProjectId: nextActive });
+    set({
+      projects: remaining,
+      archivedProjects: target ? [...prevArchived, { ...target, archived: true }] : prevArchived,
+      activeProjectId: nextActive,
+    });
     try {
       await api.updateProject(pid, { archived: true });
     } catch (e) {
-      set({ projects: prev, activeProjectId: prevActive, error: (e as Error).message });
+      set({
+        projects: prev,
+        archivedProjects: prevArchived,
+        activeProjectId: prevActive,
+        error: (e as Error).message,
+      });
     }
   },
 

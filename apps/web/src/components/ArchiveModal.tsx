@@ -1,5 +1,7 @@
 import { useEffect } from "react";
-import type { Project } from "../lib/types";
+import type { Project, ProjectCounts } from "../lib/types";
+
+const ZERO_COUNTS: ProjectCounts = { in_progress: 0, open: 0, verified: 0, rejected: 0 };
 
 interface ArchiveModalProps {
   projects: Project[];
@@ -49,6 +51,37 @@ export function ArchiveModal({ projects, onUnarchive, onDelete, onClose }: Archi
                 <div className="archive-row-info">
                   <div className="archive-row-name">{p.name}</div>
                   {p.subtitle && <div className="archive-row-sub dim">{p.subtitle}</div>}
+                  <div className="archive-row-pips ptab-counts mono">
+                    {(() => {
+                      const c = p.counts ?? ZERO_COUNTS;
+                      if (c.open === 0 && c.verified === 0 && c.rejected === 0) {
+                        return (
+                          <span className="ptab-pip dim">
+                            <span className="pip-dot pip-rest" />0
+                          </span>
+                        );
+                      }
+                      return (
+                        <>
+                          {c.open > 0 && (
+                            <span className="ptab-pip" title={`${c.open} awaiting review`}>
+                              <span className="pip-dot pip-blue" />{c.open}
+                            </span>
+                          )}
+                          {c.verified > 0 && (
+                            <span className="ptab-pip" title={`${c.verified} verified`}>
+                              <span className="pip-dot pip-green" />{c.verified}
+                            </span>
+                          )}
+                          {c.rejected > 0 && (
+                            <span className="ptab-pip" title={`${c.rejected} rejected`}>
+                              <span className="pip-dot pip-red" />{c.rejected}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
                 <div className="archive-row-actions">
                   <button
