@@ -9,6 +9,7 @@ import { inferSections, lastCellId, type SectionNode } from "./lib/sections";
 
 import { KeyGate } from "./components/KeyGate";
 import { ErrorBanner } from "./components/ErrorBanner";
+import { ArchiveModal } from "./components/ArchiveModal";
 import { ProjectTabStrip } from "./components/ProjectTabStrip";
 import { FilterBar } from "./components/FilterBar";
 import { Cell } from "./components/Cell";
@@ -41,6 +42,18 @@ function Main() {
   const deleteProject = useStore((s) => s.deleteProject);
   const reorderProject = useStore((s) => s.reorderProject);
 
+  const archivedProjects = useStore((s) => s.archivedProjects);
+  const archiveProject = useStore((s) => s.archiveProject);
+  const unarchiveProject = useStore((s) => s.unarchiveProject);
+  const loadArchivedProjects = useStore((s) => s.loadArchivedProjects);
+
+  const [archiveOpen, setArchiveOpen] = useState(false);
+
+  const openArchive = useCallback(() => {
+    void loadArchivedProjects();
+    setArchiveOpen(true);
+  }, [loadArchivedProjects]);
+
   const setVerdict = useStore((s) => s.setVerdict);
   const unlockCell = useStore((s) => s.unlockCell);
   const reorderCell = useStore((s) => s.reorderCell);
@@ -57,6 +70,10 @@ function Main() {
   useEffect(() => {
     void loadProjects();
   }, [loadProjects]);
+
+  useEffect(() => {
+    void loadArchivedProjects();
+  }, [loadArchivedProjects]);
 
   // Default active project
   useEffect(() => {
@@ -138,12 +155,39 @@ function Main() {
     return m;
   }, [sections]);
 
+  const archiveModal = archiveOpen ? (
+    <ArchiveModal
+      projects={archivedProjects}
+      onUnarchive={(pid) => void unarchiveProject(pid)}
+      onDelete={(pid) => void deleteProject(pid)}
+      onClose={() => setArchiveOpen(false)}
+    />
+  ) : null;
+
   if (!activeProject) {
     return (
       <div className="page">
         <ErrorBanner />
+        <header className="top">
+          <ProjectTabStrip
+            projects={projects}
+            activeId={activeId}
+            onSelect={(pid) => setActiveProject(pid)}
+            onArchive={(pid) => void archiveProject(pid)}
+            onOpenArchive={openArchive}
+            onReorder={(pid, toIndex) => void reorderProject(pid, toIndex)}
+            onAdd={() => {
+              const name = window.prompt("Project name") || "untitled";
+              void createProject(name);
+            }}
+          />
+        </header>
         <div className="empty-create-page">
-          <div className="mono">No projects yet.</div>
+          <div className="mono">
+            {projects.length === 0 && archivedProjects.length === 0
+              ? "No projects yet."
+              : "No active projects — open the archive (folder) or create one."}
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -151,9 +195,10 @@ function Main() {
               void createProject(name);
             }}
           >
-            create your first project
+            create a project
           </button>
         </div>
+        {archiveModal}
       </div>
     );
   }
@@ -266,7 +311,8 @@ function Main() {
           projects={projects}
           activeId={activeId}
           onSelect={(pid) => setActiveProject(pid)}
-          onClose={(pid) => void deleteProject(pid)}
+          onArchive={(pid) => void archiveProject(pid)}
+          onOpenArchive={openArchive}
           onReorder={(pid, toIndex) => void reorderProject(pid, toIndex)}
           onAdd={() => {
             const name = window.prompt("Project name") || "untitled";
@@ -307,6 +353,7 @@ function Main() {
         <span>local working copy</span>
         {activeProject.repo && <span className="dim">{activeProject.repo}</span>}
       </footer>
+      {archiveModal}
     </div>
   );
 }
